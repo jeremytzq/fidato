@@ -1,7 +1,6 @@
 'use client'
 
 import { cn } from '@/utils/cn'
-import { motion, HTMLMotionProps } from 'framer-motion'
 import { ButtonHTMLAttributes } from 'react'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive'

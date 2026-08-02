@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, TrendingUp, TrendingDown, DollarSign, Percent, Trash2 } from 'lucide-react'
+import { Plus, TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react'
 import type { Income, Expense, IncomeCategory, ExpenseCategory } from '@/types'
 import { formatCurrency, formatPercent } from '@/utils/format'
 

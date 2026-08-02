@@ -8,7 +8,6 @@ import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Phone, MessageCircle, Plus, MoreHorizontal, Calendar } from 'lucide-react'
 import type { Lead, LeadStatus } from '@/types'
-import { Badge } from '@/components/ui/Badge'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
 
@@ -113,8 +112,7 @@ export function KanbanBoard({ initialLeads, onEdit, onAddLead }: { initialLeads:
     setActiveId(null)
     if (!over) return
 
-    const activeStatus = getColumn(active.id)
-    // over could be a column id or a card id
+    const activeStatus = leads.find(l => l.id === active.id)?.status
     const newStatus = (COLUMNS.find(c => c.id === over.id)?.id) ||
       (leads.find(l => l.id === over.id)?.status)
 

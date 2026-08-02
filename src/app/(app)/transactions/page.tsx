@@ -8,10 +8,8 @@ export default async function TransactionsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: transactions }, { data: clients }] = await Promise.all([
-    supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-    supabase.from('clients').select('id, name').eq('user_id', user.id),
-  ])
+  const { data: transactions } = await supabase
+    .from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
 
-  return <TransactionsClient initialTransactions={transactions || []} clients={clients || []} userId={user.id} />
+  return <TransactionsClient initialTransactions={transactions || []} userId={user.id} />
 }

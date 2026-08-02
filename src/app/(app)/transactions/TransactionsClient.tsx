@@ -94,8 +94,8 @@ function TxModal({ open, onClose, tx, clients, userId, onSaved }: {
   )
 }
 
-export default function TransactionsClient({ initialTransactions, clients, userId }: {
-  initialTransactions: Transaction[]; clients: { id: string; name: string }[]; userId: string
+export default function TransactionsClient({ initialTransactions, userId }: {
+  initialTransactions: Transaction[]; userId: string
 }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
