@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Plus, Pencil, Trash2, Search, Building2 } from 'lucide-react'
 import type { Transaction, TransactionType, TransactionStatus } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
+import { NumberInput } from '@/components/ui/NumberInput'
 
 const TX_TYPES: TransactionType[] = ['Sale', 'Purchase', 'Rental', 'Lease']
 const TX_STATUSES: TransactionStatus[] = ['Active', 'Pending', 'Completed', 'Cancelled']
@@ -71,7 +72,7 @@ function TxModal({ open, onClose, tx, userId, onSaved }: {
           <Select label="Status" value={form.status} onChange={set('status')}>
             {TX_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </Select>
-          <Input label="Transaction Value (SGD) *" type="number" value={form.amount} onChange={set('amount')} placeholder="1000000" />
+          <NumberInput label="Transaction Value (SGD) *" value={form.amount} onChange={raw => setForm(f => ({ ...f, amount: raw }))} placeholder="1,000,000" />
           <Input label="Commission Rate (%)" type="number" step="0.1" value={form.commission_rate} onChange={set('commission_rate')} />
           <Input label="Closing Date" type="date" value={form.closing_date} onChange={set('closing_date')} />
           <div className="flex items-end">

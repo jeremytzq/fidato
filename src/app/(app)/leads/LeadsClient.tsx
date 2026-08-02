@@ -7,6 +7,7 @@ import { LeadModal } from '@/components/leads/LeadModal'
 import { Button } from '@/components/ui/Button'
 import { Plus } from 'lucide-react'
 import type { Lead, LeadStatus } from '@/types'
+import { useReminders } from '@/lib/useReminders'
 
 export default function LeadsClient({ initialLeads, userId }: { initialLeads: Lead[]; userId: string }) {
   const router = useRouter()
@@ -14,6 +15,8 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [modalOpen, setModalOpen] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [defaultStatus, setDefaultStatus] = useState<LeadStatus>('New')
+
+  useReminders(initialLeads)
 
   const openAdd = (status: LeadStatus = 'New') => {
     setEditingLead(null)
@@ -46,6 +49,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
       <div className="flex-1 overflow-x-auto">
         <KanbanBoard
           initialLeads={initialLeads}
+          userId={userId}
           onEdit={openEdit}
           onAddLead={openAdd}
         />

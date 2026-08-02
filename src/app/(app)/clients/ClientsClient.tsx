@@ -53,11 +53,11 @@ function ClientCard({ client, onEdit, onDelete }: { client: Client; onEdit: (c: 
 
       {client.phone && (
         <div className="flex gap-2 pt-1">
-          <a href={`tel:${client.phone}`} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
-            <Phone size={11} /> Call
+          <a href={`tel:${client.phone}`} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+            <Phone size={14} /> Call
           </a>
-          <a href={`https://wa.me/65${client.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
-            <MessageCircle size={11} /> WhatsApp
+          <a href={`https://wa.me/65${client.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
+            <MessageCircle size={14} /> WhatsApp
           </a>
         </div>
       )}

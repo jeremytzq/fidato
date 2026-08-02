@@ -6,10 +6,12 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, MessageCircle, Plus, MoreHorizontal, Calendar } from 'lucide-react'
+import { Phone, MessageCircle, Plus, MoreHorizontal, Calendar, Bell } from 'lucide-react'
 import type { Lead, LeadStatus } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activity'
+import { cn } from '@/utils/cn'
 
 const COLUMNS: { id: LeadStatus; label: string; color: string; bg: string }[] = [
   { id: 'New', label: 'New', color: 'hsl(235, 75%, 60%)', bg: 'hsl(235, 75%, 60%, 0.06)' },
@@ -20,13 +22,27 @@ const COLUMNS: { id: LeadStatus; label: string; color: string; bg: string }[] = 
   { id: 'Lost', label: 'Lost', color: 'hsl(0, 84%, 60%)', bg: 'hsl(0, 84%, 60%, 0.06)' },
 ]
 
-function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
+const GRADE_STYLES = {
+  A: 'bg-red-50 text-red-600 border border-red-200',
+  B: 'bg-amber-50 text-amber-600 border border-amber-200',
+  C: 'bg-blue-50 text-blue-600 border border-blue-200',
+}
+
+function LeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit: (l: Lead) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lead.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
+  }
+
+  const handleCall = () => {
+    logActivity(userId, lead.id, 'Called')
+  }
+
+  const handleWhatsApp = () => {
+    logActivity(userId, lead.id, 'Sent WhatsApp message')
   }
 
   return (
@@ -38,7 +54,7 @@ function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0">
               {lead.name[0].toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -48,13 +64,20 @@ function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
               )}
             </div>
           </div>
-          <button
-            onPointerDown={e => e.stopPropagation()}
-            onClick={() => onEdit(lead)}
-            className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
-          >
-            <MoreHorizontal size={14} />
-          </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {lead.grade && (
+              <span className={cn('text-xs font-bold px-1.5 py-0.5 rounded-md', GRADE_STYLES[lead.grade])}>
+                {lead.grade}
+              </span>
+            )}
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={() => onEdit(lead)}
+              className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
+            >
+              <MoreHorizontal size={14} />
+            </button>
+          </div>
         </div>
 
         {lead.budget && (
@@ -68,6 +91,13 @@ function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
           </div>
         )}
 
+        {lead.reminder_at && (
+          <div className="flex items-center gap-1.5 text-xs text-amber-600">
+            <Bell size={11} />
+            Reminder: {formatDate(lead.reminder_at)}
+          </div>
+        )}
+
         {lead.source && (
           <p className="text-xs text-muted-foreground">Source: {lead.source}</p>
         )}
@@ -76,9 +106,10 @@ function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
           {lead.phone && (
             <a
               href={`tel:${lead.phone}`}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              onClick={handleCall}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
             >
-              <Phone size={11} /> Call
+              <Phone size={14} /> Call
             </a>
           )}
           {lead.phone && (
@@ -86,9 +117,10 @@ function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
               href={`https://wa.me/65${lead.phone.replace(/\D/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+              onClick={handleWhatsApp}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
             >
-              <MessageCircle size={11} /> WhatsApp
+              <MessageCircle size={14} /> WhatsApp
             </a>
           )}
         </div>
@@ -97,7 +129,12 @@ function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
   )
 }
 
-export function KanbanBoard({ initialLeads, onEdit, onAddLead }: { initialLeads: Lead[]; onEdit: (l: Lead) => void; onAddLead: (status: LeadStatus) => void }) {
+export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead }: {
+  initialLeads: Lead[]
+  userId: string
+  onEdit: (l: Lead) => void
+  onAddLead: (status: LeadStatus) => void
+}) {
   const [leads, setLeads] = useState(initialLeads)
   const [activeId, setActiveId] = useState<string | null>(null)
   const supabase = createClient()
@@ -129,7 +166,6 @@ export function KanbanBoard({ initialLeads, onEdit, onAddLead }: { initialLeads:
           const colLeads = leads.filter(l => l.status === col.id)
           return (
             <div key={col.id} className="flex-shrink-0 w-64">
-              {/* Column header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ background: col.color }} />
@@ -144,7 +180,6 @@ export function KanbanBoard({ initialLeads, onEdit, onAddLead }: { initialLeads:
                 </button>
               </div>
 
-              {/* Column body */}
               <SortableContext items={colLeads.map(l => l.id)} strategy={verticalListSortingStrategy}>
                 <div
                   id={col.id}
@@ -153,7 +188,7 @@ export function KanbanBoard({ initialLeads, onEdit, onAddLead }: { initialLeads:
                 >
                   <AnimatePresence>
                     {colLeads.map(lead => (
-                      <LeadCard key={lead.id} lead={lead} onEdit={onEdit} />
+                      <LeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} />
                     ))}
                   </AnimatePresence>
                   {colLeads.length === 0 && (

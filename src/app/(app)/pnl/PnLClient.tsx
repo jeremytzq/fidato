@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Plus, TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react'
 import type { Income, Expense, IncomeCategory, ExpenseCategory } from '@/types'
 import { formatCurrency, formatPercent } from '@/utils/format'
+import { NumberInput } from '@/components/ui/NumberInput'
 
 const INCOME_CATS: IncomeCategory[] = ['Commission', 'Referral Fee', 'Consultation', 'Other']
 const EXPENSE_CATS: ExpenseCategory[] = ['Office Rent', 'Advertising', 'Staging', 'Insurance', 'Photography', 'Licensing', 'Travel', 'Other']
@@ -223,7 +224,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
             {INCOME_CATS.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Amount (SGD) *" type="number" value={incomeForm.amount} onChange={e => setIncomeForm(f => ({ ...f, amount: e.target.value }))} placeholder="5000" />
+            <NumberInput label="Amount (SGD) *" value={incomeForm.amount} onChange={raw => setIncomeForm(f => ({ ...f, amount: raw }))} placeholder="5,000" />
             <Input label="Date *" type="date" value={incomeForm.date} onChange={e => setIncomeForm(f => ({ ...f, date: e.target.value }))} />
           </div>
           <Input label="Description" value={incomeForm.description} onChange={e => setIncomeForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" />
@@ -241,7 +242,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
             {EXPENSE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Amount (SGD) *" type="number" value={expenseForm.amount} onChange={e => setExpenseForm(f => ({ ...f, amount: e.target.value }))} placeholder="500" />
+            <NumberInput label="Amount (SGD) *" value={expenseForm.amount} onChange={raw => setExpenseForm(f => ({ ...f, amount: raw }))} placeholder="500" />
             <Input label="Date *" type="date" value={expenseForm.date} onChange={e => setExpenseForm(f => ({ ...f, date: e.target.value }))} />
           </div>
           <Input label="Description" value={expenseForm.description} onChange={e => setExpenseForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" />
