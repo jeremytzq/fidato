@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { RecentLeads } from '@/components/dashboard/RecentActivity'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
-import { Users, UserCheck, DollarSign, TrendingUp, FileText, Target } from 'lucide-react'
 import { formatCurrency } from '@/utils/format'
 import type { MonthlyPnL } from '@/types'
 
@@ -66,12 +65,12 @@ export default async function DashboardPage() {
   const firstName = user.user_metadata?.full_name?.split(' ')[0] || 'there'
 
   const statCards = [
-    { title: 'Total Leads', value: String(stats.totalLeads), icon: Users, iconColor: 'hsl(235, 75%, 60%)', subtitle: 'All time' },
-    { title: 'Active Clients', value: String(stats.activeClients), icon: UserCheck, iconColor: 'hsl(142, 71%, 45%)', subtitle: 'In your CRM' },
-    { title: 'Total Revenue', value: formatCurrency(stats.totalRevenue), icon: DollarSign, iconColor: 'hsl(142, 71%, 45%)', subtitle: 'Gross income' },
-    { title: 'Net Profit', value: formatCurrency(stats.netProfit), icon: TrendingUp, iconColor: 'hsl(235, 75%, 60%)', subtitle: `After expenses` },
-    { title: 'Pending Deals', value: String(stats.pendingDeals), icon: FileText, iconColor: 'hsl(38, 92%, 50%)', subtitle: 'Active & pending' },
-    { title: 'Conversion Rate', value: `${stats.conversionRate}%`, icon: Target, iconColor: 'hsl(280, 65%, 60%)', subtitle: 'Leads → Won' },
+    { title: 'Total Leads', value: String(stats.totalLeads), iconName: 'Users' as const, iconColor: 'hsl(235, 75%, 60%)', subtitle: 'All time' },
+    { title: 'Active Clients', value: String(stats.activeClients), iconName: 'UserCheck' as const, iconColor: 'hsl(142, 71%, 45%)', subtitle: 'In your CRM' },
+    { title: 'Total Revenue', value: formatCurrency(stats.totalRevenue), iconName: 'DollarSign' as const, iconColor: 'hsl(142, 71%, 45%)', subtitle: 'Gross income' },
+    { title: 'Net Profit', value: formatCurrency(stats.netProfit), iconName: 'TrendingUp' as const, iconColor: 'hsl(235, 75%, 60%)', subtitle: 'After expenses' },
+    { title: 'Pending Deals', value: String(stats.pendingDeals), iconName: 'FileText' as const, iconColor: 'hsl(38, 92%, 50%)', subtitle: 'Active & pending' },
+    { title: 'Conversion Rate', value: `${stats.conversionRate}%`, iconName: 'Target' as const, iconColor: 'hsl(280, 65%, 60%)', subtitle: 'Leads → Won' },
   ]
 
   return (

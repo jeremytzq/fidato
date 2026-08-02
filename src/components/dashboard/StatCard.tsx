@@ -1,21 +1,25 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
+import { TrendingUp, TrendingDown, Users, UserCheck, DollarSign, FileText, Target } from 'lucide-react'
 import { cn } from '@/utils/cn'
+
+const iconMap = { Users, UserCheck, DollarSign, TrendingUp, TrendingDown, FileText, Target }
+export type IconName = keyof typeof iconMap
 
 interface StatCardProps {
   title: string
   value: string
   subtitle?: string
   trend?: { value: number; label: string }
-  icon: LucideIcon
+  iconName: IconName
   iconColor?: string
   index?: number
 }
 
-export function StatCard({ title, value, subtitle, trend, icon: Icon, iconColor = 'hsl(235, 75%, 60%)', index = 0 }: StatCardProps) {
+export function StatCard({ title, value, subtitle, trend, iconName, iconColor = 'hsl(235, 75%, 60%)', index = 0 }: StatCardProps) {
   const positive = trend ? trend.value >= 0 : true
+  const Icon = iconMap[iconName]
 
   return (
     <motion.div
