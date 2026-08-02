@@ -15,9 +15,9 @@ import { formatCurrency, formatDate } from '@/utils/format'
 const TX_TYPES: TransactionType[] = ['Sale', 'Purchase', 'Rental', 'Lease']
 const TX_STATUSES: TransactionStatus[] = ['Active', 'Pending', 'Completed', 'Cancelled']
 
-function TxModal({ open, onClose, tx, clients, userId, onSaved }: {
+function TxModal({ open, onClose, tx, userId, onSaved }: {
   open: boolean; onClose: () => void; tx: Transaction | null
-  clients: { id: string; name: string }[]; userId: string; onSaved: () => void
+  userId: string; onSaved: () => void
 }) {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
@@ -191,7 +191,7 @@ export default function TransactionsClient({ initialTransactions, userId }: {
         )}
       </div>
 
-      <TxModal open={modalOpen} onClose={() => setModalOpen(false)} tx={editingTx} clients={clients} userId={userId} onSaved={handleSaved} />
+      <TxModal open={modalOpen} onClose={() => setModalOpen(false)} tx={editingTx} userId={userId} onSaved={handleSaved} />
     </div>
   )
 }

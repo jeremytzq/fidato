@@ -117,7 +117,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {statCards.map((s, i) => {
+        {statCards.map((s) => {
           const Icon = s.icon
           return (
             <div key={s.title} className="bg-card border border-border rounded-xl p-5">

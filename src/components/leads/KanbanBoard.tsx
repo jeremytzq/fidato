@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
@@ -104,11 +104,9 @@ export function KanbanBoard({ initialLeads, onEdit, onAddLead }: { initialLeads:
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
-  const getColumn = (id: string) => leads.find(l => l.id === id)?.status
-
   const handleDragStart = ({ active }: any) => setActiveId(active.id)
 
-  const handleDragEnd = useCallback(async ({ active, over }: any) => {
+  const handleDragEnd = async ({ active, over }: any) => {
     setActiveId(null)
     if (!over) return
 
@@ -120,7 +118,7 @@ export function KanbanBoard({ initialLeads, onEdit, onAddLead }: { initialLeads:
 
     setLeads(prev => prev.map(l => l.id === active.id ? { ...l, status: newStatus } : l))
     await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', active.id)
-  }, [leads, supabase])
+  }
 
   const activeLead = activeId ? leads.find(l => l.id === activeId) : null
 
