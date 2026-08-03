@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { RecentLeads } from '@/components/dashboard/RecentActivity'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
+import { LeadSourceChart } from '@/components/dashboard/LeadSourceChart'
 import { formatCurrency } from '@/utils/format'
 import type { MonthlyPnL } from '@/types'
 
@@ -42,6 +43,17 @@ async function getDashboardData(userId: string) {
     months.push({ month: label, income: inc, expenses: exp, profit: inc - exp })
   }
 
+  // Lead source breakdown
+  const sourceCounts = Object.entries(
+    leads.reduce((acc, lead) => {
+      const src = lead.source || 'Other'
+      acc[src] = (acc[src] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+  )
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count)
+
   return {
     leads: leads.slice(0, 6),
     stats: {
@@ -53,6 +65,7 @@ async function getDashboardData(userId: string) {
       netProfit: totalIncome - totalExpenses,
     },
     chartData: months,
+    sourceCounts,
   }
 }
 
@@ -61,7 +74,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { leads, stats, chartData } = await getDashboardData(user.id)
+  const { leads, stats, chartData, sourceCounts } = await getDashboardData(user.id)
   const firstName = user.user_metadata?.full_name?.split(' ')[0] || 'there'
 
   const statCards = [
@@ -89,7 +102,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Charts + Recent leads */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
         <div className="lg:col-span-3">
           <RevenueChart data={chartData} />
         </div>
@@ -97,6 +110,9 @@ export default async function DashboardPage() {
           <RecentLeads leads={leads} />
         </div>
       </div>
+
+      {/* Lead source chart */}
+      <LeadSourceChart data={sourceCounts} />
     </div>
   )
 }

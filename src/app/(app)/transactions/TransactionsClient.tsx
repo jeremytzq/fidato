@@ -54,8 +54,35 @@ function TxModal({ open, onClose, tx, userId, onSaved }: {
       commission_amount: commission, closing_date: form.closing_date || null,
       notes: form.notes || null, updated_at: new Date().toISOString(),
     }
-    if (tx) await supabase.from('transactions').update(payload).eq('id', tx.id)
-    else await supabase.from('transactions').insert({ ...payload, created_at: new Date().toISOString() })
+
+    let txId = tx?.id
+    if (tx) {
+      await supabase.from('transactions').update(payload).eq('id', tx.id)
+    } else {
+      const { data: inserted } = await supabase
+        .from('transactions')
+        .insert({ ...payload, created_at: new Date().toISOString() })
+        .select('id')
+        .single()
+      txId = inserted?.id
+    }
+
+    // Keep income table in sync: one Commission record per Completed transaction
+    if (txId) {
+      await supabase.from('income').delete().eq('transaction_id', txId)
+      if (payload.status === 'Completed' && commission > 0) {
+        await supabase.from('income').insert({
+          user_id: userId,
+          transaction_id: txId,
+          category: 'Commission',
+          amount: commission,
+          date: payload.closing_date || new Date().toISOString().split('T')[0],
+          description: `${form.client_name.trim()} — ${form.property_address.trim()}`,
+          created_at: new Date().toISOString(),
+        })
+      }
+    }
+
     setSaving(false)
     onSaved()
     onClose()
@@ -110,6 +137,7 @@ export default function TransactionsClient({ initialTransactions, userId }: {
   const handleSaved = () => startTransition(() => router.refresh())
 
   const handleDelete = async (id: string) => {
+    await supabase.from('income').delete().eq('transaction_id', id)
     await supabase.from('transactions').delete().eq('id', id)
     handleSaved()
   }

@@ -277,7 +277,7 @@ export default function ContentHubClient({
             {presetCategories.map(cat => (
               <div key={cat}>
                 <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{cat}</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {filteredPreset.filter(t => t.category === cat).map(t => (
                     <TemplateCard
                       key={t.id}
@@ -308,7 +308,7 @@ export default function ContentHubClient({
                 )}
               </div>
             )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredTemplates.map(t => (
                 <TemplateCard
                   key={t.id}
