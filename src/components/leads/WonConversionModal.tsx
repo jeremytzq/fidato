@@ -64,27 +64,63 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
       .eq('id', lead.id)
     if (leadErr) { setSaving(false); setError(leadErr.message); return }
 
-    const { data: clientData, error: clientErr } = await supabase
-      .from('clients')
-      .insert({
-        user_id: userId,
-        name: lead.name,
-        email: lead.email,
-        phone: lead.phone,
-        property_type: lead.property_type,
-        notes: lead.notes,
-        created_at: now,
-        updated_at: now,
-      })
-      .select('id')
-      .single()
-    if (clientErr) { setSaving(false); setError(clientErr.message); return }
+    // Check for existing client by phone to avoid duplicates
+    const normalizedPhone = lead.phone?.replace(/\D/g, '') || null
+    let clientId: string
+
+    if (normalizedPhone) {
+      const { data: existing } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('phone', lead.phone!)
+        .maybeSingle()
+
+      if (existing) {
+        clientId = existing.id
+      } else {
+        const { data: newClient, error: clientErr } = await supabase
+          .from('clients')
+          .insert({
+            user_id: userId,
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            property_type: lead.property_type,
+            notes: lead.notes,
+            created_at: now,
+            updated_at: now,
+          })
+          .select('id')
+          .single()
+        if (clientErr) { setSaving(false); setError(clientErr.message); return }
+        clientId = newClient.id
+      }
+    } else {
+      // No phone — always create a new client
+      const { data: newClient, error: clientErr } = await supabase
+        .from('clients')
+        .insert({
+          user_id: userId,
+          name: lead.name,
+          email: lead.email,
+          phone: lead.phone,
+          property_type: lead.property_type,
+          notes: lead.notes,
+          created_at: now,
+          updated_at: now,
+        })
+        .select('id')
+        .single()
+      if (clientErr) { setSaving(false); setError(clientErr.message); return }
+      clientId = newClient.id
+    }
 
     const { data: txData, error: txErr } = await supabase
       .from('transactions')
       .insert({
         user_id: userId,
-        client_id: clientData.id,
+        client_id: clientId,
         client_name: lead.name,
         property_address: form.property_address.trim(),
         transaction_type: form.transaction_type,
