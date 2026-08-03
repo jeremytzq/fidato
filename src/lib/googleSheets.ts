@@ -289,7 +289,7 @@ export async function pullClientsFromGoogleSheets(userId: string): Promise<{ upd
     headers: { Authorization: `Bearer ${token}` },
   })
   if (res.status === 401) throw new Error('Google session expired. Sign out and sign back in.')
-  if (!res.ok) throw new Error('Failed to read Clients sheet.')
+  if (!res.ok) return { updated: 0, created: 0 } // Clients tab doesn't exist yet — push will create it
 
   const data = await res.json()
   const rows: string[][] = data.values ?? []
