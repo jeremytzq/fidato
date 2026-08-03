@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         {children}
       </main>
-      <MobileNav />
+      <MobileNav user={user} />
     </div>
   )
 }
