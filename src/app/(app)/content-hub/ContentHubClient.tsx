@@ -201,7 +201,7 @@ export default function ContentHubClient({
             {presetCategories.map(cat => (
               <div key={cat}>
                 <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{cat}</h2>
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filteredPreset.filter(t => t.category === cat).map(t => (
                     <TemplateCard
                       key={t.id}
@@ -218,7 +218,7 @@ export default function ContentHubClient({
 
         {/* ── My Templates tab ── */}
         {tab === 'my' && (
-          <div className="space-y-2 pb-4">
+          <div className="pb-4">
             {filteredTemplates.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <MessageSquare size={32} className="text-muted-foreground opacity-30" />
@@ -232,18 +232,20 @@ export default function ContentHubClient({
                 )}
               </div>
             )}
-            {filteredTemplates.map(t => (
-              <TemplateCard
-                key={t.id}
-                title={t.title}
-                body={t.body}
-                category={t.category}
-                date={t.created_at}
-                onClick={() => setUseTarget({ id: t.id, title: t.title, body: t.body, category: t.category })}
-                onEdit={() => { setEditingTemplate(t); setTemplateModalOpen(true) }}
-                onDelete={() => deleteTemplate(t.id)}
-              />
-            ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {filteredTemplates.map(t => (
+                <TemplateCard
+                  key={t.id}
+                  title={t.title}
+                  body={t.body}
+                  category={t.category}
+                  date={t.created_at}
+                  onClick={() => setUseTarget({ id: t.id, title: t.title, body: t.body, category: t.category })}
+                  onEdit={() => { setEditingTemplate(t); setTemplateModalOpen(true) }}
+                  onDelete={() => deleteTemplate(t.id)}
+                />
+              ))}
+            </div>
           </div>
         )}
 
@@ -333,28 +335,17 @@ function TemplateCard({
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={onClick}
-      className="bg-card border border-border rounded-xl p-4 hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer group"
+      className="bg-card border border-border rounded-xl p-4 hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer group flex flex-col min-h-[120px]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <p className="text-sm font-semibold text-foreground">{title}</p>
-            {category && (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                {category}
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-            {body.replace(/\n+/g, ' ')}
-          </p>
-          {date && (
-            <p className="text-[10px] text-muted-foreground mt-1.5">{formatDate(date)}</p>
-          )}
-        </div>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        {category && (
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary flex-shrink-0">
+            {category}
+          </span>
+        )}
         {(onEdit || onDelete) && (
           <div
-            className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+            className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-auto flex-shrink-0"
             onClick={e => e.stopPropagation()}
           >
             {onEdit && (
@@ -370,6 +361,13 @@ function TemplateCard({
           </div>
         )}
       </div>
+      <p className="text-sm font-semibold text-foreground mb-1.5">{title}</p>
+      <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed flex-1">
+        {body.replace(/\n+/g, ' ')}
+      </p>
+      {date && (
+        <p className="text-[10px] text-muted-foreground mt-2">{formatDate(date)}</p>
+      )}
     </motion.div>
   )
 }

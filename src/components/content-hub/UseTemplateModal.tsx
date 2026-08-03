@@ -17,7 +17,7 @@ function fillVariables(body: string, lead: Lead | null, senderName: string, send
   const hour = new Date().getHours()
   const dayPeriod = hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : 'Evening'
   return body
-    .replace(/{{client_name}}/g, lead?.name || '[Client Name]')
+    .replace(/{{client_name}}/g, lead?.display_name || lead?.name || '[Client Name]')
     .replace(/{{client_email}}/g, lead?.email || '[Client Email]')
     .replace(/{{client_phone}}/g, lead?.phone || lead?.whatsapp_number || '[Client Phone]')
     .replace(/{{sender_name}}/g, senderName)
@@ -48,7 +48,7 @@ export function UseTemplateModal({ open, onClose, template, userId, senderName, 
     if (!open) return
     setSelectedLead(null); setSearch(''); setCopied(false); setPickerOpen(false)
     supabase.from('leads')
-      .select('id, name, phone, whatsapp_number, email')
+      .select('id, name, display_name, phone, whatsapp_number, email')
       .eq('user_id', userId)
       .order('name')
       .then(({ data }) => setLeads((data as Lead[]) || []))

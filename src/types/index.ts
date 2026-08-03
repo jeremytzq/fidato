@@ -12,6 +12,7 @@ export interface Lead {
   id: string
   user_id: string
   name: string
+  display_name: string | null
   email: string | null
   phone: string | null
   whatsapp_number: string | null

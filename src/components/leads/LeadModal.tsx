@@ -47,7 +47,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
   const [saveError, setSaveError] = useState<string | null>(null)
   const [activities, setActivities] = useState<ActivityLog[]>([])
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', whatsapp_number: '',
+    name: '', display_name: '', email: '', phone: '', whatsapp_number: '',
     status: defaultStatus, source: '' as LeadSource | '',
     property_type: '' as PropertyType | '', budget: '',
     client_type: '' as ClientType | '',
@@ -62,6 +62,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
     if (lead) {
       setForm({
         name: lead.name,
+        display_name: lead.display_name || '',
         email: lead.email || '',
         phone: lead.phone || '',
         whatsapp_number: lead.whatsapp_number || '',
@@ -80,7 +81,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
         reminder_at: lead.reminder_at ? lead.reminder_at.slice(0, 16) : '',
       })
     } else {
-      setForm({ name: '', email: '', phone: '', whatsapp_number: '', status: defaultStatus, source: '', property_type: '', budget: '', client_type: '', project_interested: '', birthday: '', property_address: '', correspondence_address: '', notes: '', follow_up_date: '', grade: '', reminder_at: '' })
+      setForm({ name: '', display_name: '', email: '', phone: '', whatsapp_number: '', status: defaultStatus, source: '', property_type: '', budget: '', client_type: '', project_interested: '', birthday: '', property_address: '', correspondence_address: '', notes: '', follow_up_date: '', grade: '', reminder_at: '' })
     }
   }, [lead, defaultStatus, open])
 
@@ -108,6 +109,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
     const payload = {
       user_id: userId,
       name: form.name.trim(),
+      display_name: form.display_name.trim() || null,
       email: form.email || null,
       phone: form.phone || null,
       whatsapp_number: form.whatsapp_number || null,
@@ -154,6 +156,9 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <Input label="Full Name *" value={form.name} onChange={set('name')} placeholder="John Tan" />
+          </div>
+          <div className="col-span-2">
+            <Input label="Display Name" value={form.display_name} onChange={set('display_name')} placeholder="e.g. Johnny (used in templates)" />
           </div>
           <Input label="Mobile Number" type="tel" value={form.phone} onChange={set('phone')} placeholder="9123 4567" />
           <Input label="WhatsApp Number" type="tel" value={form.whatsapp_number} onChange={set('whatsapp_number')} placeholder="9123 4567" />
