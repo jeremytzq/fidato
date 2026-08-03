@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
   if (!pagesRes.ok) return Response.redirect(`${appUrl}/settings?error=meta_pages`)
   const { data: pages } = await pagesRes.json()
 
+  console.log('meta callback pages:', JSON.stringify(pages))
   if (!pages?.length) return Response.redirect(`${appUrl}/settings?error=meta_no_pages`)
 
   const supabase = createAdminClient()
