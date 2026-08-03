@@ -14,7 +14,6 @@ export default function LoginPage() {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: { prompt: 'select_account' },
         scopes: 'https://www.googleapis.com/auth/spreadsheets',
       },
     })
