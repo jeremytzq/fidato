@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Fidato — Real Estate CRM',
+  title: 'Fidato Labs — Real Estate CRM',
   description: 'Your trusted real estate client management platform',
 }
 

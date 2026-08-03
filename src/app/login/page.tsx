@@ -34,7 +34,7 @@ export default function LoginPage() {
             <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'hsl(235, 75%, 60%)' }}>
               <span className="text-white font-bold text-lg">F</span>
             </div>
-            <span className="text-white text-2xl font-semibold tracking-tight">Fidato</span>
+            <span className="text-white text-2xl font-semibold tracking-tight">Fidato Labs</span>
           </div>
           <p className="text-sm" style={{ color: 'hsl(220, 14%, 60%)' }}>
             Your trusted real estate CRM

@@ -85,7 +85,7 @@ export default async function SharePage({ params }: { params: { token: string } 
           </a>
         </div>
 
-        <p className="text-center text-[10px] text-gray-400">Powered by Fidato</p>
+        <p className="text-center text-[10px] text-gray-400">Powered by Fidato Labs</p>
       </div>
     </div>
   )

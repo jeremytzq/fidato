@@ -59,7 +59,7 @@ export default function Sidebar({ user }: { user: User }) {
         >
           <Building2 size={16} className="text-white" />
         </div>
-        <span className="text-white font-semibold text-lg tracking-tight">Fidato</span>
+        <span className="text-white font-semibold text-lg tracking-tight">Fidato Labs</span>
       </div>
 
       {/* Nav */}

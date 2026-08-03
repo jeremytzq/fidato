@@ -42,7 +42,7 @@ async function createSheet(token: string): Promise<string> {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      properties: { title: 'Fidato — My Leads' },
+      properties: { title: 'Fidato Labs — My Leads' },
       sheets: [{ properties: { title: 'Leads', sheetId: 0 } }],
     }),
   })
