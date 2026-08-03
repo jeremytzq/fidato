@@ -26,14 +26,13 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
             className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
             onClick={onClose}
           />
-          {/* pb-20 on mobile = clears the bottom nav bar */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 sm:pb-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className={`w-full ${sizeMap[size]} bg-card rounded-2xl border border-border shadow-2xl flex flex-col max-h-[calc(100dvh-6rem)] sm:max-h-[calc(100dvh-2rem)]`}
+              className={`w-full ${sizeMap[size]} bg-card rounded-2xl border border-border shadow-2xl flex flex-col max-h-[calc(100dvh-9rem)] sm:max-h-[calc(100dvh-2rem)]`}
             >
               {/* Sticky header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
