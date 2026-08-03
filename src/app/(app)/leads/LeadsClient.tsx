@@ -9,7 +9,6 @@ import { WonConversionModal } from '@/components/leads/WonConversionModal'
 import { Button } from '@/components/ui/Button'
 import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink } from 'lucide-react'
 import type { Lead, LeadStatus } from '@/types'
-import { useReminders } from '@/lib/useReminders'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
@@ -194,8 +193,6 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [sheetUrl, setSheetUrl] = useState<string | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [syncResult, setSyncResult] = useState<{ updated: number; created: number } | null>(null)
-
-  useReminders(initialLeads)
 
   const openAdd = (status: LeadStatus = 'New') => {
     setEditingLead(null)

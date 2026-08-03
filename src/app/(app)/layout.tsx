@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import MobileNav from '@/components/layout/MobileNav'
+import { NotificationProvider } from '@/components/layout/NotificationProvider'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -16,6 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </main>
       <MobileNav user={user} />
+      <NotificationProvider userId={user.id} />
     </div>
   )
 }
