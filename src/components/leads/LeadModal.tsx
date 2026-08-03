@@ -11,7 +11,7 @@ import type { Lead, LeadStatus, LeadSource, PropertyType, LeadGrade, ClientType,
 import { cn } from '@/utils/cn'
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
-const SOURCES: LeadSource[] = ['Referral', 'Website', 'Social Media', 'Cold Call', 'Walk-in', 'Other']
+const SOURCES: LeadSource[] = ['Referral', 'Website', 'Meta Ads', 'Google PPC', 'Cold Call', 'Walk-in', 'Doorknock', 'Roadshow', 'Flyers / Mailers', 'Other']
 const PROPERTY_TYPES: PropertyType[] = ['HDB', 'Condo', 'Landed', 'Commercial', 'Industrial', 'Other']
 
 const CLIENT_TYPE_OPTIONS: { value: ClientType; emoji: string; style: string; active: string }[] = [

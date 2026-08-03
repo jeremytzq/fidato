@@ -85,7 +85,7 @@ async function handleLead(leadgenId: string, pageId: string) {
     whatsapp_number: phone,
     email,
     status: 'New',
-    source: 'Social Media',
+    source: 'Meta Ads',
     notes: buildNotes(fields),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

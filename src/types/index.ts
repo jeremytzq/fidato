@@ -1,7 +1,7 @@
 export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Negotiating' | 'Won' | 'Lost'
 export type LeadGrade = 'A' | 'B' | 'C'
 export type ClientType = 'Hot' | 'Warm' | 'Cold'
-export type LeadSource = 'Referral' | 'Website' | 'Social Media' | 'Cold Call' | 'Walk-in' | 'Other'
+export type LeadSource = 'Referral' | 'Website' | 'Meta Ads' | 'Google PPC' | 'Cold Call' | 'Walk-in' | 'Doorknock' | 'Roadshow' | 'Flyers / Mailers' | 'Other'
 export type PropertyType = 'HDB' | 'Condo' | 'Landed' | 'Commercial' | 'Industrial' | 'Other'
 export type TransactionType = 'Sale' | 'Purchase' | 'Rental' | 'Lease'
 export type TransactionStatus = 'Active' | 'Completed' | 'Pending' | 'Cancelled'
