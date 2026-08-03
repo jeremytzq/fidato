@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Modal } from '@/components/ui/Modal'
@@ -28,7 +28,8 @@ function TxModal({ open, onClose, tx, userId, onSaved }: {
     closing_date: '', notes: '',
   })
 
-  useState(() => {
+  useEffect(() => {
+    if (!open) return
     if (tx) setForm({
       client_name: tx.client_name, property_address: tx.property_address,
       transaction_type: tx.transaction_type, status: tx.status,
@@ -36,7 +37,7 @@ function TxModal({ open, onClose, tx, userId, onSaved }: {
       closing_date: tx.closing_date || '', notes: tx.notes || '',
     })
     else setForm({ client_name: '', property_address: '', transaction_type: 'Sale', status: 'Active', amount: '', commission_rate: '2', closing_date: '', notes: '' })
-  })
+  }, [open, tx])
 
   const set = (k: string) => (e: React.ChangeEvent<any>) => setForm(f => ({ ...f, [k]: e.target.value }))
 

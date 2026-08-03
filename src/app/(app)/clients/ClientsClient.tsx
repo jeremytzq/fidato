@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Modal } from '@/components/ui/Modal'
@@ -22,10 +22,11 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', phone: '', property_type: '' as PropertyType | '', notes: '' })
 
-  useState(() => {
+  useEffect(() => {
+    if (!open) return
     if (client) setForm({ name: client.name, email: client.email || '', phone: client.phone || '', property_type: client.property_type || '', notes: client.notes || '' })
     else setForm({ name: '', email: '', phone: '', property_type: '', notes: '' })
-  })
+  }, [open, client])
 
   const set = (k: string) => (e: React.ChangeEvent<any>) => setForm(f => ({ ...f, [k]: e.target.value }))
 
