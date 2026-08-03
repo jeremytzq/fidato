@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { useState, useEffect } from 'react'
+import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -13,19 +13,40 @@ import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activity'
 import { cn } from '@/utils/cn'
 
-const COLUMNS: { id: LeadStatus; label: string; color: string; bg: string }[] = [
-  { id: 'New', label: 'New', color: 'hsl(235, 75%, 60%)', bg: 'hsl(235, 75%, 60%, 0.06)' },
-  { id: 'Contacted', label: 'Contacted', color: 'hsl(280, 65%, 60%)', bg: 'hsl(280, 65%, 60%, 0.06)' },
-  { id: 'Qualified', label: 'Qualified', color: 'hsl(38, 92%, 50%)', bg: 'hsl(38, 92%, 50%, 0.06)' },
-  { id: 'Negotiating', label: 'Negotiating', color: 'hsl(25, 95%, 53%)', bg: 'hsl(25, 95%, 53%, 0.06)' },
-  { id: 'Won', label: 'Won', color: 'hsl(142, 71%, 45%)', bg: 'hsl(142, 71%, 45%, 0.06)' },
-  { id: 'Lost', label: 'Lost', color: 'hsl(0, 84%, 60%)', bg: 'hsl(0, 84%, 60%, 0.06)' },
+const COLUMNS: { id: LeadStatus; label: string; color: string }[] = [
+  { id: 'New', label: 'New', color: 'hsl(235, 75%, 60%)' },
+  { id: 'Contacted', label: 'Contacted', color: 'hsl(280, 65%, 60%)' },
+  { id: 'Qualified', label: 'Qualified', color: 'hsl(38, 92%, 50%)' },
+  { id: 'Negotiating', label: 'Negotiating', color: 'hsl(25, 95%, 53%)' },
+  { id: 'Won', label: 'Won', color: 'hsl(142, 71%, 45%)' },
+  { id: 'Lost', label: 'Lost', color: 'hsl(0, 84%, 60%)' },
 ]
 
 const GRADE_STYLES = {
   A: 'bg-red-50 text-red-600 border border-red-200',
   B: 'bg-amber-50 text-amber-600 border border-amber-200',
   C: 'bg-blue-50 text-blue-600 border border-blue-200',
+}
+
+// Registers the column body as a drop target so empty columns accept drops
+function DroppableColumnBody({ colId, leads, children }: {
+  colId: LeadStatus
+  leads: Lead[]
+  children: React.ReactNode
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: colId })
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'space-y-3 min-h-24 rounded-xl p-2 transition-colors',
+        isOver && 'ring-2 ring-primary/30 bg-primary/5'
+      )}
+      style={{ background: leads.length === 0 && !isOver ? 'hsl(var(--muted) / 0.4)' : undefined }}
+    >
+      {children}
+    </div>
+  )
 }
 
 function LeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit: (l: Lead) => void }) {
@@ -37,13 +58,8 @@ function LeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit
     opacity: isDragging ? 0.4 : 1,
   }
 
-  const handleCall = () => {
-    logActivity(userId, lead.id, 'Called')
-  }
-
-  const handleWhatsApp = () => {
-    logActivity(userId, lead.id, 'Sent WhatsApp message')
-  }
+  const handleCall = () => logActivity(userId, lead.id, 'Called')
+  const handleWhatsApp = () => logActivity(userId, lead.id, 'Sent WhatsApp message')
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
@@ -129,15 +145,21 @@ function LeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit
   )
 }
 
-export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead }: {
+export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon }: {
   initialLeads: Lead[]
   userId: string
   onEdit: (l: Lead) => void
   onAddLead: (status: LeadStatus) => void
+  onWon?: (lead: Lead) => void
 }) {
   const [leads, setLeads] = useState(initialLeads)
   const [activeId, setActiveId] = useState<string | null>(null)
   const supabase = createClient()
+
+  // Sync with parent when server refreshes data after a save
+  useEffect(() => {
+    setLeads(initialLeads)
+  }, [initialLeads])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -147,11 +169,19 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead }: {
     setActiveId(null)
     if (!over) return
 
-    const activeStatus = leads.find(l => l.id === active.id)?.status
+    const activeLead = leads.find(l => l.id === active.id)
+    const activeStatus = activeLead?.status
+    // over.id is either a column ID (DroppableColumnBody) or a lead ID (another card)
     const newStatus = (COLUMNS.find(c => c.id === over.id)?.id) ||
       (leads.find(l => l.id === over.id)?.status)
 
     if (!newStatus || activeStatus === newStatus) return
+
+    // Won: don't save yet — let the parent show the conversion modal
+    if (newStatus === 'Won' && activeLead) {
+      onWon?.(activeLead)
+      return
+    }
 
     setLeads(prev => prev.map(l => l.id === active.id ? { ...l, status: newStatus } : l))
     await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', active.id)
@@ -166,6 +196,7 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead }: {
           const colLeads = leads.filter(l => l.status === col.id)
           return (
             <div key={col.id} className="flex-shrink-0 w-64">
+              {/* Column header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ background: col.color }} />
@@ -180,12 +211,9 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead }: {
                 </button>
               </div>
 
+              {/* Column body — registered as droppable so empty columns accept drops */}
               <SortableContext items={colLeads.map(l => l.id)} strategy={verticalListSortingStrategy}>
-                <div
-                  id={col.id}
-                  className="space-y-3 min-h-24 rounded-xl p-2 transition-colors"
-                  style={{ background: colLeads.length === 0 ? 'hsl(var(--muted) / 0.4)' : 'transparent' }}
-                >
+                <DroppableColumnBody colId={col.id} leads={colLeads}>
                   <AnimatePresence>
                     {colLeads.map(lead => (
                       <LeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} />
@@ -194,7 +222,7 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead }: {
                   {colLeads.length === 0 && (
                     <div className="text-center py-6 text-xs text-muted-foreground">Drop here</div>
                   )}
-                </div>
+                </DroppableColumnBody>
               </SortableContext>
             </div>
           )
@@ -205,6 +233,7 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead }: {
         {activeLead && (
           <div className="bg-card border border-primary rounded-xl p-4 shadow-xl w-64 opacity-90">
             <p className="text-sm font-semibold text-foreground">{activeLead.name}</p>
+            {activeLead.phone && <p className="text-xs text-muted-foreground mt-1">{activeLead.phone}</p>}
           </div>
         )}
       </DragOverlay>

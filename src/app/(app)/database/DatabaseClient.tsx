@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/Badge'
-import { Download, Search, ChevronUp, ChevronDown } from 'lucide-react'
+import { Download, Search, ChevronUp, ChevronDown, Sparkles } from 'lucide-react'
 import type { Lead, Client, Transaction } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
+import { createClient } from '@/lib/supabase/client'
 
 type Tab = 'leads' | 'clients' | 'transactions'
 
@@ -29,14 +31,35 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
     : <ChevronUp size={13} className="text-muted-foreground opacity-30" />
 }
 
-export default function DatabaseClient({ leads, clients, transactions }: {
-  leads: Lead[]; clients: Client[]; transactions: Transaction[]
+const SEED_LEADS = [
+  { name: 'Tan Wei Ming', email: 'tanwm@gmail.com', phone: '91234567', status: 'New', source: 'Referral', property_type: 'Condo', budget: 1500000, notes: 'Looking for 3BR in D9/D10. Ready to move within 6 months.', grade: 'A' },
+  { name: 'Sarah Lim', email: 'sarahlim@yahoo.com.sg', phone: '87654321', status: 'Contacted', source: 'Social Media', property_type: 'HDB', budget: 580000, notes: 'First-timer. Interested in Tampines or Bedok area.', grade: 'B' },
+  { name: 'Ahmad Razif', email: 'ahmad.razif@email.com', phone: '96543210', status: 'Qualified', source: 'Cold Call', property_type: 'Industrial', budget: 3200000, notes: 'Looking for 3-storey terrace factory. Has financing ready.', grade: 'A' },
+  { name: 'Chen Mei Ling', email: null, phone: '82345678', status: 'Negotiating', source: 'Walk-in', property_type: 'Landed', budget: 4500000, notes: 'Semi-D in Bukit Timah. Seller countered at $4.65M. Client considering.', grade: 'B' },
+  { name: 'Jessica Koh', email: 'jessicakoh88@gmail.com', phone: '98765432', status: 'Lost', source: 'Website', property_type: 'HDB', budget: 450000, notes: 'Went with another agent. Price expectation gap.', grade: 'C' },
+  { name: 'Raj Kumar', email: 'rajkumar@corpmail.sg', phone: '81234567', status: 'Contacted', source: 'Referral', property_type: 'Industrial', budget: 2800000, notes: 'JTC flatted factory for food manufacturing. Needs loading bay.', grade: 'B' },
+  { name: 'Michelle Teo', email: 'michelle.teo@email.com', phone: '97894561', status: 'Qualified', source: 'Social Media', property_type: 'Condo', budget: 1200000, notes: 'Upgrading from HDB. CCR preferred. Timeline: 3 months.', grade: 'A' },
+  { name: 'David Ang', email: 'davidang@gmail.com', phone: '90012345', status: 'New', source: 'Referral', property_type: 'Condo', budget: 980000, notes: 'Investment purchase. Yield-focused. Prefers D15.', grade: 'B' },
+]
+
+const SEED_CLIENTS = [
+  { name: 'Lim Boon Huat', email: 'limboong@hotmail.com', phone: '91122334', property_type: 'Landed', notes: 'Long-time client. Owns 2 landed properties. Referred Tan Wei Ming.' },
+  { name: 'Wong Ah Kow', email: null, phone: '87761234', property_type: 'Condo', notes: 'Bought Parc Clematis unit in 2024. Happy client.' },
+  { name: 'Patricia Chan', email: 'patriciachan@gmail.com', phone: '96600123', property_type: 'HDB', notes: 'Sold Bishan 5-room HDB. Looking to upsize next year.' },
+]
+
+export default function DatabaseClient({ leads, clients, transactions, userId }: {
+  leads: Lead[]; clients: Client[]; transactions: Transaction[]; userId: string
 }) {
+  const router = useRouter()
+  const [, startTransition] = useTransition()
+  const supabase = createClient()
   const [tab, setTab] = useState<Tab>('leads')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [seeding, setSeeding] = useState(false)
 
   const handleSort = (key: string) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -88,6 +111,20 @@ export default function DatabaseClient({ leads, clients, transactions }: {
     else exportCSV(filteredTx, 'transactions.csv')
   }
 
+  const handleSeedData = async () => {
+    if (!confirm('Load sample data? This will add placeholder leads and clients to your account.')) return
+    setSeeding(true)
+    const now = new Date().toISOString()
+    await supabase.from('leads').insert(
+      SEED_LEADS.map(l => ({ ...l, user_id: userId, created_at: now, updated_at: now }))
+    )
+    await supabase.from('clients').insert(
+      SEED_CLIENTS.map(c => ({ ...c, user_id: userId, created_at: now, updated_at: now }))
+    )
+    setSeeding(false)
+    startTransition(() => router.refresh())
+  }
+
   const statuses = tab === 'transactions'
     ? ['Active', 'Pending', 'Completed', 'Cancelled']
     : ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
@@ -99,12 +136,23 @@ export default function DatabaseClient({ leads, clients, transactions }: {
           <h1 className="text-2xl font-bold text-foreground">Database</h1>
           <p className="text-sm text-muted-foreground mt-0.5">All your data in one place</p>
         </div>
-        <button
-          onClick={exportData}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-        >
-          <Download size={14} /> Export CSV
-        </button>
+        <div className="flex gap-2">
+          {leads.length === 0 && clients.length === 0 && (
+            <button
+              onClick={handleSeedData}
+              disabled={seeding}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/30 bg-primary/5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+            >
+              <Sparkles size={14} /> {seeding ? 'Loading...' : 'Load Sample Data'}
+            </button>
+          )}
+          <button
+            onClick={exportData}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Download size={14} /> Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

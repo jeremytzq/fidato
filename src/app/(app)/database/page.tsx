@@ -14,5 +14,5 @@ export default async function DatabasePage() {
     supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
   ])
 
-  return <DatabaseClient leads={leads || []} clients={clients || []} transactions={transactions || []} />
+  return <DatabaseClient leads={leads || []} clients={clients || []} transactions={transactions || []} userId={user.id} />
 }

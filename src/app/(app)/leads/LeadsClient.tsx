@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { KanbanBoard } from '@/components/leads/KanbanBoard'
 import { LeadModal } from '@/components/leads/LeadModal'
+import { WonConversionModal } from '@/components/leads/WonConversionModal'
 import { Button } from '@/components/ui/Button'
 import { Plus } from 'lucide-react'
 import type { Lead, LeadStatus } from '@/types'
@@ -15,6 +16,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [modalOpen, setModalOpen] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [defaultStatus, setDefaultStatus] = useState<LeadStatus>('New')
+  const [wonLead, setWonLead] = useState<Lead | null>(null)
 
   useReminders(initialLeads)
 
@@ -52,6 +54,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
           userId={userId}
           onEdit={openEdit}
           onAddLead={openAdd}
+          onWon={setWonLead}
         />
       </div>
 
@@ -63,6 +66,16 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
         userId={userId}
         onSaved={handleSaved}
       />
+
+      {wonLead && (
+        <WonConversionModal
+          open={!!wonLead}
+          onClose={() => setWonLead(null)}
+          lead={wonLead}
+          userId={userId}
+          onConverted={handleSaved}
+        />
+      )}
     </div>
   )
 }
