@@ -45,9 +45,17 @@ export interface Client {
   id: string
   user_id: string
   name: string
+  display_name: string | null
   email: string | null
   phone: string | null
+  whatsapp_number: string | null
   property_type: PropertyType | null
+  budget: number | null
+  project_interested: string | null
+  birthday: string | null
+  property_address: string | null
+  correspondence_address: string | null
+  client_type: ClientType | null
   notes: string | null
   created_at: string
   updated_at: string

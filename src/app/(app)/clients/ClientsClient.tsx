@@ -5,35 +5,82 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
+import { NumberInput } from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Phone, MessageCircle, Pencil, Trash2, Search, FileSpreadsheet, ExternalLink } from 'lucide-react'
-import type { Client, PropertyType } from '@/types'
+import type { Client, PropertyType, ClientType } from '@/types'
 import { formatDate } from '@/utils/format'
 import { pushClientsToGoogleSheets, pullClientsFromGoogleSheets } from '@/lib/googleSheets'
+import { cn } from '@/utils/cn'
 
 const PROPERTY_TYPES: PropertyType[] = ['HDB', 'Condo', 'Landed', 'Commercial', 'Industrial', 'Other']
+
+const CLIENT_TYPE_OPTIONS: { value: ClientType; emoji: string; style: string; active: string }[] = [
+  { value: 'Hot',  emoji: '🔥', style: 'border-border text-muted-foreground hover:border-red-300',    active: 'bg-red-50 border-red-400 text-red-600' },
+  { value: 'Warm', emoji: '☀️', style: 'border-border text-muted-foreground hover:border-amber-300', active: 'bg-amber-50 border-amber-400 text-amber-600' },
+  { value: 'Cold', emoji: '🧊', style: 'border-border text-muted-foreground hover:border-blue-300',  active: 'bg-blue-50 border-blue-400 text-blue-600' },
+]
+
+const EMPTY_FORM = {
+  name: '', display_name: '', email: '', phone: '', whatsapp_number: '',
+  property_type: '' as PropertyType | '', budget: '',
+  project_interested: '', birthday: '',
+  property_address: '', correspondence_address: '',
+  client_type: '' as ClientType | '', notes: '',
+}
 
 function ClientFormModal({ open, onClose, client, userId, onSaved }: {
   open: boolean; onClose: () => void; client: Client | null; userId: string; onSaved: () => void
 }) {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', phone: '', property_type: '' as PropertyType | '', notes: '' })
+  const [form, setForm] = useState(EMPTY_FORM)
 
   useEffect(() => {
     if (!open) return
-    if (client) setForm({ name: client.name, email: client.email || '', phone: client.phone || '', property_type: client.property_type || '', notes: client.notes || '' })
-    else setForm({ name: '', email: '', phone: '', property_type: '', notes: '' })
+    if (client) setForm({
+      name: client.name,
+      display_name: client.display_name || '',
+      email: client.email || '',
+      phone: client.phone || '',
+      whatsapp_number: client.whatsapp_number || '',
+      property_type: client.property_type || '',
+      budget: client.budget ? String(client.budget) : '',
+      project_interested: client.project_interested || '',
+      birthday: client.birthday || '',
+      property_address: client.property_address || '',
+      correspondence_address: client.correspondence_address || '',
+      client_type: client.client_type || '',
+      notes: client.notes || '',
+    })
+    else setForm(EMPTY_FORM)
   }, [open, client])
 
   const set = (k: string) => (e: React.ChangeEvent<any>) => setForm(f => ({ ...f, [k]: e.target.value }))
+  const toggleClientType = (t: ClientType) => setForm(f => ({ ...f, client_type: f.client_type === t ? '' : t }))
 
   const handleSave = async () => {
     if (!form.name.trim()) return
     setSaving(true)
-    const payload = { user_id: userId, name: form.name.trim(), email: form.email || null, phone: form.phone || null, property_type: (form.property_type as PropertyType) || null, notes: form.notes || null, updated_at: new Date().toISOString() }
+    const payload = {
+      user_id: userId,
+      name: form.name.trim(),
+      display_name: form.display_name.trim() || null,
+      email: form.email || null,
+      phone: form.phone || null,
+      whatsapp_number: form.whatsapp_number || null,
+      property_type: (form.property_type as PropertyType) || null,
+      budget: form.budget ? parseInt(form.budget) : null,
+      project_interested: form.project_interested || null,
+      birthday: form.birthday || null,
+      property_address: form.property_address || null,
+      correspondence_address: form.correspondence_address || null,
+      client_type: (form.client_type as ClientType) || null,
+      notes: form.notes || null,
+      updated_at: new Date().toISOString(),
+    }
     if (client) await supabase.from('clients').update(payload).eq('id', client.id)
     else await supabase.from('clients').insert({ ...payload, created_at: new Date().toISOString() })
     setSaving(false)
@@ -42,21 +89,55 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={client ? 'Edit Client' : 'Add Client'}>
+    <Modal open={open} onClose={onClose} title={client ? 'Edit Client' : 'Add Client'} size="md">
       <div className="space-y-4">
-        <Input label="Full Name *" value={form.name} onChange={set('name')} placeholder="Jane Lim" />
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Email" type="email" value={form.email} onChange={set('email')} placeholder="jane@email.com" />
-          <Input label="Phone" value={form.phone} onChange={set('phone')} placeholder="9123 4567" />
+          <div className="col-span-2">
+            <Input label="Full Name *" value={form.name} onChange={set('name')} placeholder="Jane Lim" />
+          </div>
+          <div className="col-span-2">
+            <Input label="Display Name" value={form.display_name} onChange={set('display_name')} placeholder="e.g. Jane (used in templates)" />
+          </div>
+          <Input label="Mobile Number" type="tel" value={form.phone} onChange={set('phone')} placeholder="9123 4567" />
+          <Input label="WhatsApp Number" type="tel" value={form.whatsapp_number} onChange={set('whatsapp_number')} placeholder="9123 4567" />
+          <div className="col-span-2">
+            <Input label="Email" type="email" value={form.email} onChange={set('email')} placeholder="jane@email.com" />
+          </div>
+          <Select label="Property Type" value={form.property_type} onChange={set('property_type')}>
+            <option value="">— Select type —</option>
+            {PROPERTY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </Select>
+          <NumberInput label="Budget (SGD)" value={form.budget} onChange={raw => setForm(f => ({ ...f, budget: raw }))} placeholder="500,000" />
+          <div className="col-span-2">
+            <Input label="Project Interested" value={form.project_interested} onChange={set('project_interested')} placeholder="e.g. The Arden, Lentor Modern" />
+          </div>
+          <div className="col-span-2">
+            <Input label="Property Address" value={form.property_address} onChange={set('property_address')} placeholder="e.g. 123 Orchard Road #10-01" />
+          </div>
+          <div className="col-span-2">
+            <Input label="Correspondence Address" value={form.correspondence_address} onChange={set('correspondence_address')} placeholder="Mailing address" />
+          </div>
+          <Input label="Birthday" type="date" value={form.birthday} onChange={set('birthday')} />
         </div>
-        <Select label="Property Type" value={form.property_type} onChange={set('property_type')}>
-          <option value="">— Select type —</option>
-          {PROPERTY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-        </Select>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Client Type</label>
+          <div className="flex gap-2">
+            {CLIENT_TYPE_OPTIONS.map(t => (
+              <button key={t.value} type="button" onClick={() => toggleClientType(t.value)}
+                className={cn('flex-1 py-2 px-2 rounded-lg text-center border-2 transition-colors', form.client_type === t.value ? t.active : `bg-card ${t.style}`)}>
+                <span className="block text-base">{t.emoji}</span>
+                <span className="block text-xs font-semibold mt-0.5">{t.value}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Notes</label>
           <textarea value={form.notes} onChange={set('notes')} rows={3} placeholder="Notes about this client..." className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-colors" />
         </div>
+
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} loading={saving}>{client ? 'Save Changes' : 'Add Client'}</Button>
