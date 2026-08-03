@@ -14,57 +14,6 @@ import { formatDate } from '@/utils/format'
 
 const PROPERTY_TYPES: PropertyType[] = ['HDB', 'Condo', 'Landed', 'Commercial', 'Industrial', 'Other']
 
-function ClientCard({ client, onEdit, onDelete }: { client: Client; onEdit: (c: Client) => void; onDelete: (id: string) => void }) {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -2, boxShadow: '0 6px 20px rgba(0,0,0,0.07)' }}
-      className="bg-card border border-border rounded-xl p-5 flex flex-col gap-3"
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-            {client.name[0].toUpperCase()}
-          </div>
-          <div>
-            <p className="font-semibold text-foreground">{client.name}</p>
-            {client.property_type && <Badge label={client.property_type} />}
-          </div>
-        </div>
-        <div className="flex gap-1">
-          <button onClick={() => onEdit(client)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-            <Pencil size={13} />
-          </button>
-          <button onClick={() => onDelete(client.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors">
-            <Trash2 size={13} />
-          </button>
-        </div>
-      </div>
-
-      <div className="text-sm text-muted-foreground space-y-1">
-        {client.email && <p>{client.email}</p>}
-        {client.phone && <p>{client.phone}</p>}
-        {client.notes && <p className="text-xs line-clamp-2">{client.notes}</p>}
-      </div>
-
-      <div className="text-xs text-muted-foreground">Added {formatDate(client.created_at)}</div>
-
-      {client.phone && (
-        <div className="flex gap-2 pt-1">
-          <a href={`tel:${client.phone}`} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
-            <Phone size={14} /> Call
-          </a>
-          <a href={`https://wa.me/65${client.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
-            <MessageCircle size={14} /> WhatsApp
-          </a>
-        </div>
-      )}
-    </motion.div>
-  )
-}
-
 function ClientFormModal({ open, onClose, client, userId, onSaved }: {
   open: boolean; onClose: () => void; client: Client | null; userId: string; onSaved: () => void
 }) {
@@ -148,7 +97,7 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
         </Button>
       </div>
 
-      <div className="relative mb-6 max-w-sm">
+      <div className="relative mb-4 max-w-sm">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           value={search}
@@ -158,15 +107,97 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {filtered.map(c => (
-          <ClientCard key={c.id} client={c} onEdit={(c) => { setEditingClient(c); setModalOpen(true) }} onDelete={handleDelete} />
-        ))}
-        {filtered.length === 0 && (
-          <div className="col-span-3 text-center py-16 text-muted-foreground">
-            {search ? 'No clients match your search.' : 'No clients yet. Add your first client!'}
-          </div>
-        )}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead style={{ background: 'hsl(var(--muted))' }}>
+              <tr>
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 py-3">Name</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 py-3">Phone</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 py-3 hidden sm:table-cell">Email</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 py-3 hidden md:table-cell">Property</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 py-3 hidden lg:table-cell">Notes</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 py-3 hidden md:table-cell">Added</th>
+                <th className="px-4 py-3 w-28" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((c, i) => (
+                <motion.tr
+                  key={c.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.02 }}
+                  className="hover:bg-muted/30 transition-colors"
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                        {c.name[0].toUpperCase()}
+                      </div>
+                      <span className="text-sm font-medium text-foreground">{c.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{c.phone || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{c.email || '—'}</td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    {c.property_type ? <Badge label={c.property_type} /> : <span className="text-sm text-muted-foreground">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground hidden lg:table-cell max-w-48">
+                    <span className="line-clamp-1">{c.notes || '—'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell whitespace-nowrap">{formatDate(c.created_at)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      {c.phone && (
+                        <>
+                          <a
+                            href={`tel:${c.phone}`}
+                            title="Call"
+                            className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <Phone size={13} />
+                          </a>
+                          <a
+                            href={`https://wa.me/65${c.phone.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="WhatsApp"
+                            className="p-1.5 rounded-lg hover:bg-green-50 text-muted-foreground hover:text-green-600 transition-colors"
+                          >
+                            <MessageCircle size={13} />
+                          </a>
+                        </>
+                      )}
+                      <button
+                        onClick={() => { setEditingClient(c); setModalOpen(true) }}
+                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+
+          {filtered.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground text-sm">
+              {search ? 'No clients match your search.' : 'No clients yet. Add your first client!'}
+            </div>
+          )}
+        </div>
+
+        <div className="px-4 py-3 border-t border-border bg-muted/30">
+          <p className="text-xs text-muted-foreground">{filtered.length} of {initialClients.length} clients</p>
+        </div>
       </div>
 
       <ClientFormModal open={modalOpen} onClose={() => setModalOpen(false)} client={editingClient} userId={userId} onSaved={handleSaved} />
