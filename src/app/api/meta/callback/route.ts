@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
       page_id: page.id,
       page_name: page.name,
       page_access_token: page.access_token,
-      updated_at: new Date().toISOString(),
     }, { onConflict: 'page_id' })
 
     if (upsertError) {
