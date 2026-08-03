@@ -7,12 +7,13 @@ import { KanbanBoard } from '@/components/leads/KanbanBoard'
 import { LeadModal } from '@/components/leads/LeadModal'
 import { WonConversionModal } from '@/components/leads/WonConversionModal'
 import { Button } from '@/components/ui/Button'
-import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal } from 'lucide-react'
+import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink } from 'lucide-react'
 import type { Lead, LeadStatus } from '@/types'
 import { useReminders } from '@/lib/useReminders'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
+import { syncLeadsToGoogleSheets } from '@/lib/googleSheets'
 
 const STATUSES: { id: LeadStatus; label: string; color: string }[] = [
   { id: 'New',         label: 'New',         color: 'hsl(235, 75%, 60%)' },
@@ -188,6 +189,9 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [defaultStatus, setDefaultStatus] = useState<LeadStatus>('New')
   const [wonLead, setWonLead] = useState<Lead | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null)
+  const [syncError, setSyncError] = useState<string | null>(null)
 
   useReminders(initialLeads)
 
@@ -204,6 +208,19 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
 
   const handleSaved = () => startTransition(() => router.refresh())
 
+  const handleSyncToSheets = async () => {
+    setSyncing(true)
+    setSyncError(null)
+    try {
+      const url = await syncLeadsToGoogleSheets(initialLeads)
+      setSheetUrl(url)
+    } catch (e: any) {
+      setSyncError(e.message)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
@@ -211,10 +228,36 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
           <h1 className="text-2xl font-bold text-foreground">Leads</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{initialLeads.length} in pipeline</p>
         </div>
-        <Button onClick={() => openAdd()}>
-          <Plus size={15} /> Add Lead
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncToSheets}
+            disabled={syncing}
+            title="Sync to Google Sheets"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <FileSpreadsheet size={14} className="text-green-600" />
+            <span className="hidden sm:inline">{syncing ? 'Syncing…' : 'Sync to Sheets'}</span>
+          </button>
+          <Button onClick={() => openAdd()}>
+            <Plus size={15} /> Add Lead
+          </Button>
+        </div>
       </div>
+
+      {sheetUrl && (
+        <div className="flex items-center justify-between gap-3 mb-3 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
+          <span className="font-medium">Synced to Google Sheets</span>
+          <a href={sheetUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1 font-semibold hover:underline flex-shrink-0">
+            Open <ExternalLink size={12} />
+          </a>
+        </div>
+      )}
+      {syncError && (
+        <p className="mb-3 px-3 py-2.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600">
+          {syncError}
+        </p>
+      )}
 
       {/* Mobile: status-tab list */}
       <div className="flex-1 overflow-hidden md:hidden">
