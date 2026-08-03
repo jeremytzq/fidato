@@ -40,6 +40,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
   const supabase = createClient()
   const [addModal, setAddModal] = useState<'income' | 'expense' | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [incomeForm, setIncomeForm] = useState({ category: 'Commission' as IncomeCategory, amount: '', description: '', date: '' })
   const [expenseForm, setExpenseForm] = useState({ category: 'Marketing' as ExpenseCategory, amount: '', description: '', date: '' })
 
@@ -79,8 +80,10 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
   const saveIncome = async () => {
     if (!incomeForm.amount || !incomeForm.date) return
     setSaving(true)
-    await supabase.from('income').insert({ user_id: userId, category: incomeForm.category, amount: parseFloat(incomeForm.amount), description: incomeForm.description || null, date: incomeForm.date, created_at: new Date().toISOString() })
+    setSaveError(null)
+    const { error } = await supabase.from('income').insert({ user_id: userId, category: incomeForm.category, amount: parseFloat(incomeForm.amount), description: incomeForm.description || null, date: incomeForm.date, created_at: new Date().toISOString() })
     setSaving(false)
+    if (error) { setSaveError(error.message); return }
     setAddModal(null)
     setIncomeForm({ category: 'Commission', amount: '', description: '', date: '' })
     handleSaved()
@@ -89,8 +92,10 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
   const saveExpense = async () => {
     if (!expenseForm.amount || !expenseForm.date) return
     setSaving(true)
-    await supabase.from('expenses').insert({ user_id: userId, category: expenseForm.category, amount: parseFloat(expenseForm.amount), description: expenseForm.description || null, date: expenseForm.date, created_at: new Date().toISOString() })
+    setSaveError(null)
+    const { error } = await supabase.from('expenses').insert({ user_id: userId, category: expenseForm.category, amount: parseFloat(expenseForm.amount), description: expenseForm.description || null, date: expenseForm.date, created_at: new Date().toISOString() })
     setSaving(false)
+    if (error) { setSaveError(error.message); return }
     setAddModal(null)
     setExpenseForm({ category: 'Marketing', amount: '', description: '', date: '' })
     handleSaved()
@@ -216,7 +221,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
       </div>
 
       {/* Add Income modal */}
-      <Modal open={addModal === 'income'} onClose={() => setAddModal(null)} title="Add Income">
+      <Modal open={addModal === 'income'} onClose={() => { setAddModal(null); setSaveError(null) }} title="Add Income">
         <div className="space-y-4">
           <Select label="Category" value={incomeForm.category} onChange={e => setIncomeForm(f => ({ ...f, category: e.target.value as IncomeCategory }))}>
             {INCOME_CATS.map(c => <option key={c} value={c}>{c}</option>)}
@@ -226,6 +231,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
             <Input label="Date *" type="date" value={incomeForm.date} onChange={e => setIncomeForm(f => ({ ...f, date: e.target.value }))} />
           </div>
           <Input label="Description" value={incomeForm.description} onChange={e => setIncomeForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" />
+          {saveError && <p className="text-xs text-red-500 bg-red-500/10 rounded-lg px-3 py-2">{saveError}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setAddModal(null)}>Cancel</Button>
             <Button onClick={saveIncome} loading={saving}>Add Income</Button>
@@ -234,7 +240,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
       </Modal>
 
       {/* Add Expense modal */}
-      <Modal open={addModal === 'expense'} onClose={() => setAddModal(null)} title="Add Expense">
+      <Modal open={addModal === 'expense'} onClose={() => { setAddModal(null); setSaveError(null) }} title="Add Expense">
         <div className="space-y-4">
           <Select label="Category" value={expenseForm.category} onChange={e => setExpenseForm(f => ({ ...f, category: e.target.value as ExpenseCategory }))}>
             {EXPENSE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
@@ -244,6 +250,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
             <Input label="Date *" type="date" value={expenseForm.date} onChange={e => setExpenseForm(f => ({ ...f, date: e.target.value }))} />
           </div>
           <Input label="Description" value={expenseForm.description} onChange={e => setExpenseForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" />
+          {saveError && <p className="text-xs text-red-500 bg-red-500/10 rounded-lg px-3 py-2">{saveError}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setAddModal(null)}>Cancel</Button>
             <Button onClick={saveExpense} loading={saving}>Add Expense</Button>
