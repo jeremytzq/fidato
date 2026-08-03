@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/Badge'
-import { Download, Search, ChevronUp, ChevronDown, Sparkles } from 'lucide-react'
+import { Download, Search, ChevronUp, ChevronDown, Sparkles, Trash2, AlertTriangle, X } from 'lucide-react'
 import type { Lead, Client, Transaction } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
@@ -60,6 +60,11 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [seeding, setSeeding] = useState(false)
+  const [resetStep, setResetStep] = useState<0 | 1 | 2>(0)
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const [resetting, setResetting] = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
+  const confirmInputRef = useRef<HTMLInputElement>(null)
 
   const handleSort = (key: string) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -125,6 +130,37 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
     startTransition(() => router.refresh())
   }
 
+  const openResetModal = () => {
+    setResetStep(1)
+    setResetConfirmText('')
+    setResetError(null)
+  }
+
+  const closeResetModal = () => {
+    setResetStep(0)
+    setResetConfirmText('')
+    setResetError(null)
+  }
+
+  const handleReset = async () => {
+    if (resetConfirmText !== 'RESET') return
+    setResetting(true)
+    setResetError(null)
+    try {
+      const tables = ['activity_log', 'income', 'expenses', 'transactions', 'leads', 'clients']
+      for (const table of tables) {
+        const { error } = await supabase.from(table).delete().eq('user_id', userId)
+        if (error && !error.message.includes('does not exist')) throw error
+      }
+      closeResetModal()
+      startTransition(() => router.refresh())
+    } catch (e: any) {
+      setResetError(e.message)
+    } finally {
+      setResetting(false)
+    }
+  }
+
   const statuses = tab === 'transactions'
     ? ['Active', 'Pending', 'Completed', 'Cancelled']
     : ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
@@ -151,6 +187,12 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <Download size={14} /> Export CSV
+          </button>
+          <button
+            onClick={openResetModal}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-sm font-medium text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors dark:border-red-900 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
+          >
+            <Trash2 size={14} /> Reset
           </button>
         </div>
       </div>
@@ -280,6 +322,122 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
           </p>
         </div>
       </div>
+
+      {/* Reset confirmation modal */}
+      <AnimatePresence>
+        {resetStep > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) closeResetModal() }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-red-50 dark:bg-red-950/30">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                    <AlertTriangle size={16} className="text-red-600 dark:text-red-400" />
+                  </div>
+                  <span className="font-semibold text-red-700 dark:text-red-400">Reset CRM Data</span>
+                </div>
+                <button onClick={closeResetModal} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="px-5 py-5 space-y-4">
+                {resetStep === 1 && (
+                  <>
+                    <p className="text-sm text-foreground font-medium">This will permanently delete all your CRM data:</p>
+                    <ul className="space-y-1.5 text-sm text-muted-foreground">
+                      {[
+                        { label: 'Leads', count: leads.length },
+                        { label: 'Clients', count: clients.length },
+                        { label: 'Transactions', count: transactions.length },
+                        { label: 'Activity log', count: null },
+                        { label: 'Income & expense records', count: null },
+                      ].map(item => (
+                        <li key={item.label} className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                          {item.label}
+                          {item.count !== null && (
+                            <span className="ml-auto text-xs font-semibold text-red-500 tabular-nums">
+                              {item.count} record{item.count !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400">
+                      This action cannot be undone. Export a CSV backup first if you want to keep your data.
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={closeResetModal}
+                        className="flex-1 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          setResetStep(2)
+                          setTimeout(() => confirmInputRef.current?.focus(), 50)
+                        }}
+                        className="flex-1 py-2 rounded-lg bg-red-600 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+                      >
+                        Continue
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {resetStep === 2 && (
+                  <>
+                    <p className="text-sm text-foreground">
+                      Type <span className="font-mono font-bold text-red-600 bg-red-50 dark:bg-red-950/30 px-1.5 py-0.5 rounded">RESET</span> to confirm you want to delete all data.
+                    </p>
+                    <input
+                      ref={confirmInputRef}
+                      type="text"
+                      value={resetConfirmText}
+                      onChange={e => { setResetConfirmText(e.target.value); setResetError(null) }}
+                      onKeyDown={e => { if (e.key === 'Enter' && resetConfirmText === 'RESET') handleReset() }}
+                      placeholder="Type RESET"
+                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-400"
+                    />
+                    {resetError && (
+                      <p className="text-xs text-red-500">{resetError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setResetStep(1)}
+                        disabled={resetting}
+                        className="flex-1 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={handleReset}
+                        disabled={resetConfirmText !== 'RESET' || resetting}
+                        className="flex-1 py-2 rounded-lg bg-red-600 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {resetting ? 'Deleting…' : 'Delete Everything'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
