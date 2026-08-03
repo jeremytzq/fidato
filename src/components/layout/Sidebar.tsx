@@ -15,6 +15,7 @@ import {
   LogOut,
   Building2,
   BookOpen,
+  Settings,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -26,6 +27,7 @@ const navItems = [
   { href: '/pnl', label: 'Profit & Loss', icon: TrendingUp },
   { href: '/content-hub', label: 'Content Hub', icon: BookOpen },
   { href: '/database', label: 'Database', icon: Database },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar({ user }: { user: User }) {

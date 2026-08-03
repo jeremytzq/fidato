@@ -4,7 +4,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export const dynamic = 'force-dynamic'
 
 // ── Webhook verification (GET) ────────────────────────────────────────────────
-// Meta calls this once when you register the webhook URL
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const mode = searchParams.get('hub.mode')
@@ -21,7 +20,6 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const rawBody = await request.text()
 
-  // Verify signature
   const sig = request.headers.get('x-hub-signature-256')?.replace('sha256=', '')
   if (!sig || !process.env.META_APP_SECRET) {
     return new Response('Unauthorized', { status: 401 })
@@ -35,35 +33,38 @@ export async function POST(request: Request) {
 
   const body = JSON.parse(rawBody)
 
-  // Meta sends an array of entry objects; each entry can have multiple changes
   const leads: Promise<void>[] = []
   for (const entry of body.entry ?? []) {
     for (const change of entry.changes ?? []) {
       if (change.field === 'leadgen') {
-        leads.push(handleLead(change.value.leadgen_id))
+        const pageId: string = change.value.page_id ?? entry.id
+        leads.push(handleLead(change.value.leadgen_id, pageId))
       }
     }
   }
   await Promise.allSettled(leads)
 
-  // Always return 200 quickly — Meta retries if it doesn't get 200
   return new Response('OK', { status: 200 })
 }
 
-// ── Fetch lead data from Meta Graph API and insert to Supabase ───────────────
-async function handleLead(leadgenId: string) {
-  const token = process.env.META_PAGE_ACCESS_TOKEN
-  const userId = process.env.META_LEAD_USER_ID
-  if (!token || !userId) return
+// ── Route lead to the right user via meta_connections ────────────────────────
+async function handleLead(leadgenId: string, pageId: string) {
+  const supabase = createAdminClient()
 
-  // Fetch the actual form field data
+  const { data: conn } = await supabase
+    .from('meta_connections')
+    .select('user_id, page_access_token')
+    .eq('page_id', pageId)
+    .single()
+
+  if (!conn) return
+
   const res = await fetch(
-    `https://graph.facebook.com/v19.0/${leadgenId}?fields=field_data,created_time&access_token=${token}`
+    `https://graph.facebook.com/v19.0/${leadgenId}?fields=field_data,created_time&access_token=${conn.page_access_token}`
   )
   if (!res.ok) return
   const data = await res.json()
 
-  // Map Meta field names → CRM fields
   const fields: Record<string, string> = {}
   for (const f of data.field_data ?? []) {
     fields[f.name] = f.values?.[0] ?? ''
@@ -77,9 +78,8 @@ async function handleLead(leadgenId: string) {
   const phone = fields['phone_number'] || fields['phone'] || null
   const email = fields['email'] || null
 
-  const supabase = createAdminClient()
   await supabase.from('leads').insert({
-    user_id: userId,
+    user_id: conn.user_id,
     name,
     phone,
     whatsapp_number: phone,
@@ -92,7 +92,6 @@ async function handleLead(leadgenId: string) {
   })
 }
 
-// Capture any extra custom question answers as notes
 function buildNotes(fields: Record<string, string>): string | null {
   const standard = new Set([
     'full_name', 'first_name', 'last_name',
