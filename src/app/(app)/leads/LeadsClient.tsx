@@ -13,7 +13,8 @@ import { useReminders } from '@/lib/useReminders'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
-import { syncLeadsToGoogleSheets } from '@/lib/googleSheets'
+import { pushLeadsToGoogleSheets, pullLeadsFromGoogleSheets } from '@/lib/googleSheets'
+import { createClient } from '@/lib/supabase/client'
 
 const STATUSES: { id: LeadStatus; label: string; color: string }[] = [
   { id: 'New',         label: 'New',         color: 'hsl(235, 75%, 60%)' },
@@ -192,6 +193,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [syncing, setSyncing] = useState(false)
   const [sheetUrl, setSheetUrl] = useState<string | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncResult, setSyncResult] = useState<{ updated: number; created: number } | null>(null)
 
   useReminders(initialLeads)
 
@@ -208,12 +210,33 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
 
   const handleSaved = () => startTransition(() => router.refresh())
 
-  const handleSyncToSheets = async () => {
+  const handleSync = async () => {
     setSyncing(true)
     setSyncError(null)
+    setSyncResult(null)
     try {
-      const url = await syncLeadsToGoogleSheets(initialLeads)
+      // 1. Pull any Sheets edits into Supabase (skip gracefully on first sync)
+      let pullResult: { updated: number; created: number } = { updated: 0, created: 0 }
+      try {
+        pullResult = await pullLeadsFromGoogleSheets(userId)
+      } catch (e: any) {
+        if (!e.message?.includes('No sheet found')) throw e
+      }
+
+      // 2. Fetch fresh leads from Supabase so the push reflects any Sheet edits
+      const supabase = createClient()
+      const { data: freshLeads } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      // 3. Push the complete up-to-date dataset back to Sheets
+      const url = await pushLeadsToGoogleSheets((freshLeads ?? initialLeads) as Lead[])
+
       setSheetUrl(url)
+      setSyncResult(pullResult)
+      startTransition(() => router.refresh())
     } catch (e: any) {
       setSyncError(e.message)
     } finally {
@@ -230,13 +253,13 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleSyncToSheets}
+            onClick={handleSync}
             disabled={syncing}
-            title="Sync to Google Sheets"
+            title="Sync with Google Sheets"
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
           >
             <FileSpreadsheet size={14} className="text-green-600" />
-            <span className="hidden sm:inline">{syncing ? 'Syncing…' : 'Sync to Sheets'}</span>
+            <span className="hidden sm:inline">{syncing ? 'Syncing…' : 'Sheets'}</span>
           </button>
           <Button onClick={() => openAdd()}>
             <Plus size={15} /> Add Lead
@@ -246,7 +269,17 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
 
       {sheetUrl && (
         <div className="flex items-center justify-between gap-3 mb-3 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
-          <span className="font-medium">Synced to Google Sheets</span>
+          <span className="font-medium">
+            Synced
+            {syncResult && (syncResult.updated > 0 || syncResult.created > 0) && (
+              <span className="font-normal text-green-600 ml-1.5">
+                — {[
+                  syncResult.updated > 0 && `${syncResult.updated} updated`,
+                  syncResult.created > 0 && `${syncResult.created} added`,
+                ].filter(Boolean).join(', ')} from Sheets
+              </span>
+            )}
+          </span>
           <a href={sheetUrl} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1 font-semibold hover:underline flex-shrink-0">
             Open <ExternalLink size={12} />
