@@ -8,6 +8,7 @@ import { Download, Search, ChevronUp, ChevronDown, Sparkles, Trash2, AlertTriang
 import type { Lead, Client, Transaction } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
+import { clearGoogleSheets } from '@/lib/googleSheets'
 
 type Tab = 'leads' | 'clients' | 'transactions'
 
@@ -152,6 +153,7 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
         const { error } = await supabase.from(table).delete().eq('user_id', userId)
         if (error && !error.message.includes('does not exist')) throw error
       }
+      await clearGoogleSheets()
       closeResetModal()
       startTransition(() => router.refresh())
     } catch (e: any) {
@@ -376,7 +378,7 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
                       ))}
                     </ul>
                     <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400">
-                      This action cannot be undone. Export a CSV backup first if you want to keep your data.
+                      This action cannot be undone. Your Google Sheet will also be cleared. Export a CSV backup first if you want to keep your data.
                     </div>
                     <div className="flex gap-2 pt-1">
                       <button

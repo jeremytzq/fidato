@@ -280,6 +280,28 @@ export async function pushClientsToGoogleSheets(clients: Client[]): Promise<stri
   return `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
 }
 
+// ─── Clear: wipe all data rows from Leads + Clients tabs ─────────────────────
+
+export async function clearGoogleSheets(): Promise<void> {
+  let token: string
+  try { token = await getProviderToken() } catch { return } // not connected — skip silently
+
+  const sheetId = await getStoredSheetId()
+  if (!sheetId) return // no sheet created yet — nothing to clear
+
+  // Clear data rows only (keep header row 1)
+  await Promise.allSettled([
+    fetch(`${API}/${sheetId}/values/Leads!A2:R:clear`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    fetch(`${API}/${sheetId}/values/Clients!A2:G:clear`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  ])
+}
+
 export async function pullClientsFromGoogleSheets(userId: string): Promise<{ updated: number; created: number }> {
   const token = await getProviderToken()
   const sheetId = await getStoredSheetId()
