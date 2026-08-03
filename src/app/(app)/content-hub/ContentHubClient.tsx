@@ -37,16 +37,88 @@ const PRESET_TEMPLATES: PresetTemplate[] = [
     body: `Hi {{client_name}}, hope all's well!\n\nI'm ramping up my real estate work and wanted to reach out to people I trust. If you know anyone looking to buy, sell, or rent — I'd really appreciate the intro. No pressure at all, just wanted to put it out there.\n\nThanks in advance! 🙏`,
   },
   {
+    id: 'p11', category: 'Follow-Up', title: 'Viewing No-Show',
+    body: `Hi {{client_name}}, I was at the property earlier for our viewing — hope everything's okay on your end!\n\nNo worries at all — things happen. If you'd like to reschedule, I'm happy to arrange another time.\n\nJust let me know! 😊\n{{sender_name}}`,
+  },
+  {
+    id: 'p12', category: 'Follow-Up', title: 'Re-Engage Gone-Cold Lead',
+    body: `Hi {{client_name}}, it's been a while — hope you're doing well!\n\nI know property decisions take time, and circumstances change. If you're still in the market — or thinking about it again — I'd love to catch up.\n\nNo pressure at all. Just wanted to check in. 😊\n{{sender_name}}`,
+  },
+  {
     id: 'p5', category: 'Cold Outreach', title: 'Industrial Owner',
     body: `Hi {{client_name}}, I'm {{sender_name}} from PropNex — I specialise in industrial properties in Singapore.\n\nI came across your unit and wanted to reach out. If you're ever thinking of selling or leasing, I'd love to share how the market looks right now. Would you be open to a quick chat?`,
   },
   {
-    id: 'p6', category: 'Cold Outreach', title: 'HDB Upgrader',
+    id: 'p6', category: 'Cold Outreach', title: 'HDB Upgrader (MOP Soon)',
     body: `Hi {{client_name}}, I'm {{sender_name}} from PropNex — hope you don't mind me reaching out.\n\nYour flat should be hitting MOP soon and market conditions are quite favourable for upgraders right now. I'd love to share what your flat could potentially sell for.\n\nWould a quick call work?`,
+  },
+  {
+    id: 'p13', category: 'Cold Outreach', title: 'Condo Owner',
+    body: `Hi {{client_name}}, I'm {{sender_name}} from PropNex. Hope you don't mind me reaching out!\n\nI've been tracking transactions in your condo and the market for your unit type has been moving well. If you've ever thought about monetising or upgrading, I'd love to share what similar units have been selling for.\n\nWould you be open to a quick chat?`,
+  },
+  {
+    id: 'p14', category: 'Viewing Confirmations', title: 'Viewing Confirmed',
+    body: `Hi {{client_name}}, just confirming our viewing this {{day_of_week}}!\n\nI'll meet you at the property — please let me know if you need the address again. Should take about 20–30 mins.\n\nSee you then! 😊\n{{sender_name}}`,
+  },
+  {
+    id: 'p15', category: 'Viewing Confirmations', title: 'Day-Before Reminder',
+    body: `Hi {{client_name}}, just a quick reminder — we have a viewing tomorrow!\n\nLet me know if you need the details again or if anything comes up. I'll be there a little early.\n\nSee you tomorrow! 😊\n{{sender_name}}`,
+  },
+  {
+    id: 'p16', category: 'After Viewing', title: 'Thank You for Viewing',
+    body: `Hi {{client_name}}, thanks for taking the time to view today!\n\nHope it gave you a clearer picture. How are you feeling about it? Happy to answer any questions or arrange a second look if needed.\n\nNo rush — just let me know where your head's at. 😊\n{{sender_name}}`,
+  },
+  {
+    id: 'p17', category: 'After Viewing', title: 'Post-Viewing Check-In',
+    body: `Hi {{client_name}}, just wanted to check in after the viewing last week!\n\nHave you had a chance to think it over? Happy to revisit any concerns, compare similar options, or run through the numbers with you.\n\nLet me know what you'd like to do next. 😊\n{{sender_name}}`,
+  },
+  {
+    id: 'p18', category: 'HDB-Specific', title: 'HDB Eligibility Check-In',
+    body: `Hi {{client_name}}, before we shortlist flats, I wanted to run through your HDB eligibility with you.\n\nThings like citizenship status, income ceiling, and prior property ownership determine what grants and loan amounts you can access — good to get this mapped out early.\n\nWhen's a good time for a quick call? Happy to walk you through it. 😊\n{{sender_name}}`,
+  },
+  {
+    id: 'p19', category: 'HDB-Specific', title: 'First-Timer Grants Overview',
+    body: `Hi {{client_name}}, since you're a first-time buyer, I wanted to share a quick overview of the grants you might qualify for.\n\nCPF Housing Grants can go up to $80k for eligible buyers, with additional schemes for singles and couples. Worth understanding this before we commit to anything.\n\nWould you like me to run through the numbers with you? Happy to help map it out. 😊\n{{sender_name}}`,
+  },
+  {
+    id: 'p20', category: 'Offer & Negotiation', title: 'Offer Submitted',
+    body: `Hi {{client_name}}, just to let you know — I've submitted your offer to the seller's agent.\n\nWe should hear back within 1–2 days. I'll keep you posted as soon as I get news.\n\nFingers crossed! 🤞\n{{sender_name}}`,
+  },
+  {
+    id: 'p21', category: 'Offer & Negotiation', title: 'Offer Accepted — Congrats!',
+    body: `Hi {{client_name}}, great news — your offer has been accepted! 🎉\n\nNext steps: we'll move on to the option to purchase and work through the legal timeline. I'll guide you through each step — nothing to stress about.\n\nWell done — one big step closer to your new home! 😊\n{{sender_name}}`,
+  },
+  {
+    id: 'p22', category: 'Rental', title: 'Tenancy Renewal Reminder',
+    body: `Hi {{client_name}}, hope you're well! Just a heads-up — your tenancy is coming up for renewal in the next 2–3 months.\n\nIt's worth starting the conversation early to avoid any gaps. I can help you assess whether to renew, renegotiate, or explore other options.\n\nWould you like to catch up soon?\n{{sender_name}}`,
+  },
+  {
+    id: 'p23', category: 'Rental', title: 'Handover Congratulations',
+    body: `Hi {{client_name}}, congratulations on completing the handover today! 🎊\n\nHope everything went smoothly. If there's anything outstanding or you need help settling in, feel free to reach out.\n\nThanks for trusting me with this — really appreciate it. Do keep me in mind for any future property needs!\n{{sender_name}}`,
+  },
+  {
+    id: 'p24', category: 'Post-Transaction', title: 'Purchase Completion Congrats',
+    body: `Hi {{client_name}}, congratulations on your new home! 🏡🎉\n\nIt's been a pleasure guiding you through the journey. Wishing you many happy years ahead in your new place.\n\nDo stay in touch — if you ever need anything property-related down the road, I'm always here.\n{{sender_name}}`,
+  },
+  {
+    id: 'p25', category: 'Post-Transaction', title: 'Post-Deal Referral Ask',
+    body: `Hi {{client_name}}, hope you're settling in well!\n\nI really enjoyed working with you on this. If you know of anyone looking to buy, sell, or rent — I'd be grateful for the intro. Just a mention of my name works!\n\nThanks again for trusting me. 😊\n{{sender_name}}`,
+  },
+  {
+    id: 'p26', category: 'Seller Updates', title: 'Listing Is Live',
+    body: `Hi {{client_name}}, great news — your property is now live on the listings! 🎉\n\nI'll be monitoring enquiries closely and will keep you updated on any viewings or serious interest.\n\nFingers crossed for a quick and strong outcome! 🤞\n{{sender_name}}`,
+  },
+  {
+    id: 'p27', category: 'Seller Updates', title: 'Viewing Feedback for Seller',
+    body: `Hi {{client_name}}, just a quick update after today's viewing.\n\nThe buyer seemed interested but had a few questions. I'll keep the conversation going and update you once I have clearer feedback.\n\nStay tuned! 😊\n{{sender_name}}`,
   },
   {
     id: 'p7', category: 'New Project Updates', title: 'New Launch Alert',
     body: `Hi {{client_name}}, good {{day_period}}!\n\nJust wanted to flag an exciting new development that just launched. Based on what you've told me before, I think this might be of interest to you.\n\nWould you like me to send over more details? Happy to walk you through it anytime. 😊`,
+  },
+  {
+    id: 'p28', category: 'New Project Updates', title: 'Price List & Floor Plans Out',
+    body: `Hi {{client_name}}, good {{day_period}}! The price list and floor plans for the new launch are now out.\n\nI've gone through them — there are some units I think match what you're looking for. Would you like me to walk you through the options?\n\nHappy to meet up or do a quick call anytime this week. 😊\n{{sender_name}}`,
   },
   {
     id: 'p8', category: 'Birthday & Festive', title: 'Happy Birthday',
@@ -59,6 +131,10 @@ const PRESET_TEMPLATES: PresetTemplate[] = [
   {
     id: 'p10', category: 'Birthday & Festive', title: 'Hari Raya',
     body: `Hi {{client_name}}, Selamat Hari Raya Aidilfitri! 🌙\n\nWishing you and your family a joyous celebration. May this festive season bring you peace and happiness.\n\nTake care! {{sender_name}}`,
+  },
+  {
+    id: 'p29', category: 'Birthday & Festive', title: 'Deepavali',
+    body: `Hi {{client_name}}, wishing you and your family a very Happy Deepavali! 🪔\n\nMay the Festival of Lights bring joy, warmth, and good fortune to you and your loved ones.\n\nTake care! {{sender_name}}`,
   },
 ]
 
