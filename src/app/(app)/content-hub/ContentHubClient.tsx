@@ -134,7 +134,7 @@ export default function ContentHubClient({
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const presetCategories = [...new Set(filteredPreset.map(t => t.category))]
+  const presetCategories = Array.from(new Set(filteredPreset.map(t => t.category)))
 
   return (
     <div className="p-4 sm:p-6 flex flex-col h-full">
