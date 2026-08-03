@@ -14,7 +14,7 @@ import { formatCurrency, formatPercent } from '@/utils/format'
 import { NumberInput } from '@/components/ui/NumberInput'
 
 const INCOME_CATS: IncomeCategory[] = ['Commission', 'Consultation', 'Referral Fee', 'Other']
-const EXPENSE_CATS: ExpenseCategory[] = ['Advertising', 'Insurance', 'Licensing', 'Office Rent', 'Photography', 'Staging', 'Travel', 'Other']
+const EXPENSE_CATS: ExpenseCategory[] = ['Branding', 'Cobroke Comms', 'Content Creation', 'Gifts', 'Listing Portals', 'Marketing', 'Referral Fees', 'Software', 'Staging', 'Transport', 'Other']
 
 const CHART_TOOLTIP = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
@@ -41,7 +41,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
   const [addModal, setAddModal] = useState<'income' | 'expense' | null>(null)
   const [saving, setSaving] = useState(false)
   const [incomeForm, setIncomeForm] = useState({ category: 'Commission' as IncomeCategory, amount: '', description: '', date: '' })
-  const [expenseForm, setExpenseForm] = useState({ category: 'Advertising' as ExpenseCategory, amount: '', description: '', date: '' })
+  const [expenseForm, setExpenseForm] = useState({ category: 'Marketing' as ExpenseCategory, amount: '', description: '', date: '' })
 
   const handleSaved = () => startTransition(() => router.refresh())
 
@@ -92,7 +92,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
     await supabase.from('expenses').insert({ user_id: userId, category: expenseForm.category, amount: parseFloat(expenseForm.amount), description: expenseForm.description || null, date: expenseForm.date, created_at: new Date().toISOString() })
     setSaving(false)
     setAddModal(null)
-    setExpenseForm({ category: 'Advertising', amount: '', description: '', date: '' })
+    setExpenseForm({ category: 'Marketing', amount: '', description: '', date: '' })
     handleSaved()
   }
 

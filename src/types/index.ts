@@ -5,7 +5,7 @@ export type LeadSource = 'Cold Call' | 'Doorknock' | 'Flyers / Mailers' | 'Googl
 export type PropertyType = 'Commercial' | 'Condo' | 'HDB' | 'Industrial' | 'Landed' | 'Other'
 export type TransactionType = 'Lease' | 'Purchase' | 'Rental' | 'Sale'
 export type TransactionStatus = 'Active' | 'Completed' | 'Pending' | 'Cancelled'
-export type ExpenseCategory = 'Advertising' | 'Insurance' | 'Licensing' | 'Office Rent' | 'Photography' | 'Staging' | 'Travel' | 'Other'
+export type ExpenseCategory = 'Branding' | 'Cobroke Comms' | 'Content Creation' | 'Gifts' | 'Listing Portals' | 'Marketing' | 'Referral Fees' | 'Software' | 'Staging' | 'Transport' | 'Other'
 export type IncomeCategory = 'Commission' | 'Consultation' | 'Referral Fee' | 'Other'
 
 export interface Lead {
