@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { LayoutDashboard, Users, UserCheck, FileText, TrendingUp, LogOut, X } from 'lucide-react'
+import { LayoutDashboard, Users, UserCheck, FileText, TrendingUp, LogOut, X, BookOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { cn } from '@/utils/cn'
@@ -108,6 +108,15 @@ export default function MobileNav({ user }: { user: User }) {
               </button>
             </div>
 
+            <Link
+              href="/content-hub"
+              onClick={() => setSheetOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors mb-2"
+              style={{ background: 'hsl(var(--sidebar-accent) / 0.15)', color: 'hsl(var(--sidebar-foreground))' }}
+            >
+              <BookOpen size={16} />
+              Content Hub
+            </Link>
             <button
               onClick={handleSignOut}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors"

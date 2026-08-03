@@ -114,3 +114,32 @@ export interface KanbanColumn {
   color: string
   leads: Lead[]
 }
+
+export interface MessageTemplate {
+  id: string
+  user_id: string
+  title: string
+  body: string
+  category: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ShareLink {
+  id: string
+  user_id: string
+  token: string
+  title: string | null
+  message: string | null
+  media_url: string | null
+  view_count: number
+  created_at: string
+}
+
+export interface ShareLinkView {
+  id: string
+  share_link_id: string
+  viewed_at: string
+  user_agent: string | null
+  ip_address: string | null
+}
