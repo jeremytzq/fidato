@@ -149,7 +149,7 @@ export function ShareLinkModal({ open, onClose, userId, onCreated }: Props) {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              You'll be able to see how many times the link was opened, and when.
+              You&apos;ll be able to see how many times the link was opened, and when.
             </p>
 
             {error && <p className="text-xs text-red-500">{error}</p>}
@@ -174,7 +174,7 @@ export function ShareLinkModal({ open, onClose, userId, onCreated }: Props) {
               </div>
               <p className="font-semibold text-foreground">Share link ready!</p>
               <p className="text-xs text-muted-foreground text-center">
-                Share this link with clients. You'll see view counts in the Share Links tab.
+                Share this link with clients. You&apos;ll see view counts in the Share Links tab.
               </p>
             </div>
 

@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Search, BookOpen, Copy, ExternalLink, Trash2, Edit, MessageSquare, Link2, Check, Eye } from 'lucide-react'
+import { Plus, Search, Copy, ExternalLink, Trash2, Edit, MessageSquare, Link2, Check, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { TemplateModal } from '@/components/content-hub/TemplateModal'
 import { UseTemplateModal } from '@/components/content-hub/UseTemplateModal'
@@ -85,8 +84,6 @@ export default function ContentHubClient({
   senderName: string
   senderEmail: string
 }) {
-  const [, startTransition] = useTransition()
-  const router = useRouter()
   const supabase = createClient()
 
   const [tab, setTab] = useState<Tab>('preset')

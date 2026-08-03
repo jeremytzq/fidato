@@ -52,6 +52,7 @@ export function UseTemplateModal({ open, onClose, template, userId, senderName, 
       .eq('user_id', userId)
       .order('name')
       .then(({ data }) => setLeads((data as Lead[]) || []))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, userId])
 
   const filtered = leads.filter(l => l.name.toLowerCase().includes(search.toLowerCase()))
