@@ -1,4 +1,4 @@
-import type { Lead, LeadStatus, LeadGrade, LeadSource, PropertyType } from '@/types'
+import type { Lead, LeadStatus, LeadGrade, LeadSource, PropertyType, Client } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets'
@@ -178,6 +178,132 @@ export async function pullLeadsFromGoogleSheets(userId: string): Promise<{ updat
       if (!error) updated++
     } else {
       const { error } = await supabase.from('leads').insert({ ...payload, created_at: now })
+      if (!error) created++
+    }
+  }
+
+  return { updated, created }
+}
+
+// ─── Clients: Push & Pull ─────────────────────────────────────────────────────
+
+const CLIENT_HEADERS = ['Name', 'Phone', 'Email', 'Property Type', 'Notes', 'Created', 'ID']
+
+async function ensureClientsTab(token: string, spreadsheetId: string): Promise<number> {
+  const res = await fetch(`${API}/${spreadsheetId}?fields=sheets.properties`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await res.json()
+  const sheets: any[] = data.sheets ?? []
+  const existing = sheets.find((s: any) => s.properties.title === 'Clients')
+  if (existing) return existing.properties.sheetId as number
+
+  const addRes = await fetch(`${API}/${spreadsheetId}:batchUpdate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: 'Clients' } } }] }),
+  })
+  const addData = await addRes.json()
+  return addData.replies[0].addSheet.properties.sheetId as number
+}
+
+export async function pushClientsToGoogleSheets(clients: Client[]): Promise<string> {
+  const token = await getProviderToken()
+  const sheetId = await resolveSheetId(token)
+  const tabId = await ensureClientsTab(token, sheetId)
+
+  const rows = clients.map(c => [
+    c.name,
+    c.phone ?? '',
+    c.email ?? '',
+    c.property_type ?? '',
+    c.notes ?? '',
+    c.created_at.slice(0, 10),
+    c.id,
+  ])
+
+  await fetch(`${API}/${sheetId}/values/Clients!A:G:clear`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  const writeRes = await fetch(
+    `${API}/${sheetId}/values/Clients!A1?valueInputOption=RAW`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [CLIENT_HEADERS, ...rows] }),
+    }
+  )
+  if (writeRes.status === 401) throw new Error('Google session expired. Sign out and sign back in.')
+  if (!writeRes.ok) {
+    const err = await writeRes.json().catch(() => ({}))
+    throw new Error(err.error?.message || 'Failed to write clients to Google Sheets.')
+  }
+
+  await fetch(`${API}/${sheetId}:batchUpdate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [
+        {
+          repeatCell: {
+            range: { sheetId: tabId, startRowIndex: 0, endRowIndex: 1 },
+            cell: { userEnteredFormat: { textFormat: { bold: true } } },
+            fields: 'userEnteredFormat.textFormat.bold',
+          },
+        },
+        {
+          updateSheetProperties: {
+            properties: { sheetId: tabId, gridProperties: { frozenRowCount: 1 } },
+            fields: 'gridProperties.frozenRowCount',
+          },
+        },
+      ],
+    }),
+  })
+
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
+}
+
+export async function pullClientsFromGoogleSheets(userId: string): Promise<{ updated: number; created: number }> {
+  const token = await getProviderToken()
+  const sheetId = await getStoredSheetId()
+  if (!sheetId) throw new Error('No sheet found. Sync leads to Google Sheets first.')
+
+  const res = await fetch(`${API}/${sheetId}/values/Clients!A1:G`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (res.status === 401) throw new Error('Google session expired. Sign out and sign back in.')
+  if (!res.ok) throw new Error('Failed to read Clients sheet.')
+
+  const data = await res.json()
+  const rows: string[][] = data.values ?? []
+  if (rows.length <= 1) return { updated: 0, created: 0 }
+
+  const supabase = createClient()
+  const now = new Date().toISOString()
+  let updated = 0, created = 0
+
+  for (const row of rows.slice(1)) {
+    const [name, phone, email, property_type, notes, , id] = row
+    if (!name?.trim()) continue
+
+    const payload = {
+      user_id: userId,
+      name: name.trim(),
+      phone: phone?.trim() || null,
+      email: email?.trim() || null,
+      property_type: (VALID_PROPERTY_TYPES.includes(property_type as PropertyType) ? property_type : null) as PropertyType | null,
+      notes: notes?.trim() || null,
+      updated_at: now,
+    }
+
+    if (id?.trim()) {
+      const { error } = await supabase.from('clients').update(payload).eq('id', id.trim()).eq('user_id', userId)
+      if (!error) updated++
+    } else {
+      const { error } = await supabase.from('clients').insert({ ...payload, created_at: now })
       if (!error) created++
     }
   }

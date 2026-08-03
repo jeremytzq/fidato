@@ -8,9 +8,10 @@ import { Input, Select } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Phone, MessageCircle, Pencil, Trash2, Search } from 'lucide-react'
+import { Plus, Phone, MessageCircle, Pencil, Trash2, Search, FileSpreadsheet, ExternalLink } from 'lucide-react'
 import type { Client, PropertyType } from '@/types'
 import { formatDate } from '@/utils/format'
+import { pushClientsToGoogleSheets, pullClientsFromGoogleSheets } from '@/lib/googleSheets'
 
 const PROPERTY_TYPES: PropertyType[] = ['HDB', 'Condo', 'Landed', 'Commercial', 'Industrial', 'Other']
 
@@ -71,8 +72,42 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
   const [modalOpen, setModalOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [search, setSearch] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null)
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncResult, setSyncResult] = useState<{ updated: number; created: number } | null>(null)
 
   const handleSaved = () => startTransition(() => router.refresh())
+
+  const handleSync = async () => {
+    setSyncing(true)
+    setSyncError(null)
+    setSyncResult(null)
+    try {
+      let pullResult: { updated: number; created: number } = { updated: 0, created: 0 }
+      try {
+        pullResult = await pullClientsFromGoogleSheets(userId)
+      } catch (e: any) {
+        if (!e.message?.includes('No sheet found')) throw e
+      }
+
+      const { data: freshClients } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      const url = await pushClientsToGoogleSheets((freshClients ?? initialClients) as Client[])
+
+      setSheetUrl(url)
+      setSyncResult(pullResult)
+      startTransition(() => router.refresh())
+    } catch (e: any) {
+      setSyncError(e.message)
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const handleDelete = async (id: string) => {
     await supabase.from('clients').delete().eq('id', id)
@@ -92,10 +127,46 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
           <h1 className="text-2xl font-bold text-foreground">Clients</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{initialClients.length} clients</p>
         </div>
-        <Button onClick={() => { setEditingClient(null); setModalOpen(true) }}>
-          <Plus size={15} /> Add Client
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            title="Sync with Google Sheets"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <FileSpreadsheet size={14} className="text-green-600" />
+            <span className="hidden sm:inline">{syncing ? 'Syncing…' : 'Sheets'}</span>
+          </button>
+          <Button onClick={() => { setEditingClient(null); setModalOpen(true) }}>
+            <Plus size={15} /> Add Client
+          </Button>
+        </div>
       </div>
+
+      {sheetUrl && (
+        <div className="flex items-center justify-between gap-3 mb-4 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
+          <span className="font-medium">
+            Synced
+            {syncResult && (syncResult.updated > 0 || syncResult.created > 0) && (
+              <span className="font-normal text-green-600 ml-1.5">
+                — {[
+                  syncResult.updated > 0 && `${syncResult.updated} updated`,
+                  syncResult.created > 0 && `${syncResult.created} added`,
+                ].filter(Boolean).join(', ')} from Sheets
+              </span>
+            )}
+          </span>
+          <a href={sheetUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1 font-semibold hover:underline flex-shrink-0">
+            Open <ExternalLink size={12} />
+          </a>
+        </div>
+      )}
+      {syncError && (
+        <p className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600">
+          {syncError}
+        </p>
+      )}
 
       <div className="relative mb-4 max-w-sm">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
