@@ -38,6 +38,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [activities, setActivities] = useState<ActivityLog[]>([])
   const [form, setForm] = useState({
     name: '', email: '', phone: '', status: defaultStatus, source: '' as LeadSource | '',
@@ -46,6 +47,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
   })
 
   useEffect(() => {
+    setSaveError(null)
     if (lead) {
       setForm({
         name: lead.name,
@@ -84,6 +86,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
   const handleSave = async () => {
     if (!form.name.trim()) return
     setSaving(true)
+    setSaveError(null)
     const payload = {
       user_id: userId,
       name: form.name.trim(),
@@ -99,12 +102,15 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
       reminder_at: form.reminder_at ? new Date(form.reminder_at).toISOString() : null,
       updated_at: new Date().toISOString(),
     }
-    if (lead) {
-      await supabase.from('leads').update(payload).eq('id', lead.id)
-    } else {
-      await supabase.from('leads').insert({ ...payload, created_at: new Date().toISOString() })
-    }
+    const { error } = lead
+      ? await supabase.from('leads').update(payload).eq('id', lead.id)
+      : await supabase.from('leads').insert({ ...payload, created_at: new Date().toISOString() })
+
     setSaving(false)
+    if (error) {
+      setSaveError(error.message)
+      return
+    }
     onSaved()
     onClose()
   }
@@ -213,6 +219,12 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
               ))}
             </div>
           </div>
+        )}
+
+        {saveError && (
+          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            Failed to save: {saveError}
+          </p>
         )}
 
         <div className="flex items-center justify-between pt-2">
