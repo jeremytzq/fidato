@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Facebook, Link, Unlink, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { Share2, Link, Unlink, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
 interface MetaConnection {
   page_id: string
@@ -74,7 +74,7 @@ export default function SettingsClient({ connections: initial, connected, error 
       <div className="rounded-2xl border border-border overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#1877F2' }}>
-            <Facebook size={18} className="text-white" />
+            <Share2 size={18} className="text-white" />
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">Meta Lead Ads</p>
