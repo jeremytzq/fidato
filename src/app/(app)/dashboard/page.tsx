@@ -74,15 +74,15 @@ export default async function DashboardPage() {
   ]
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">Good morning, {firstName} 👋</h1>
+      <div className="mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Good morning, {firstName} 👋</h1>
         <p className="text-muted-foreground mt-1 text-sm">Here&apos;s what&apos;s happening with your pipeline today.</p>
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {statCards.map((s, i) => (
           <StatCard key={s.title} {...s} index={i} />
         ))}

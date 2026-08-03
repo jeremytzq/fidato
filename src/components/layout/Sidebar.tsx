@@ -43,7 +43,7 @@ export default function Sidebar({ user }: { user: User }) {
 
   return (
     <aside
-      className="w-60 flex-shrink-0 flex flex-col h-full"
+      className="hidden md:flex w-60 flex-shrink-0 flex-col h-full"
       style={{
         background: 'hsl(var(--sidebar))',
         borderRight: '1px solid hsl(var(--sidebar-border))',

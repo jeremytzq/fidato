@@ -104,31 +104,29 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
   ]
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="flex items-start justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Profit & Loss</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Profit & Loss</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Track your income and expenses</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setAddModal('expense')}><Plus size={15} /> Add Expense</Button>
-          <Button onClick={() => setAddModal('income')}><Plus size={15} /> Add Income</Button>
+        <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+          <Button variant="secondary" size="sm" onClick={() => setAddModal('expense')}><Plus size={14} /> Expense</Button>
+          <Button size="sm" onClick={() => setAddModal('income')}><Plus size={14} /> Income</Button>
         </div>
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {statCards.map((s) => {
           const Icon = s.icon
           return (
-            <div key={s.title} className="bg-card border border-border rounded-xl p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${s.color}18` }}>
-                  <Icon size={16} style={{ color: s.color }} />
-                </div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{s.title}</p>
+            <div key={s.title} className="bg-card border border-border rounded-xl p-3 sm:p-5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3" style={{ background: `${s.color}18` }}>
+                <Icon size={15} style={{ color: s.color }} />
               </div>
-              <p className="text-2xl font-bold tracking-tight" style={{ color: s.color }}>{s.value}</p>
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 sm:mb-0 leading-tight">{s.title}</p>
+              <p className="text-lg sm:text-2xl font-bold tracking-tight mt-1" style={{ color: s.color }}>{s.value}</p>
             </div>
           )
         })}

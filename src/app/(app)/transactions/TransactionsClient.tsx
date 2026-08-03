@@ -122,10 +122,10 @@ export default function TransactionsClient({ initialTransactions, userId }: {
   const totalCommission = filtered.reduce((s, tx) => s + tx.commission_amount, 0)
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Transactions</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Total commission: <span className="font-semibold text-foreground">{formatCurrency(totalCommission)}</span></p>
         </div>
         <Button onClick={() => { setEditingTx(null); setModalOpen(true) }}><Plus size={15} /> New Transaction</Button>
@@ -142,8 +142,8 @@ export default function TransactionsClient({ initialTransactions, userId }: {
         </select>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full">
+      <div className="bg-card border border-border rounded-xl overflow-hidden overflow-x-auto">
+        <table className="w-full min-w-[700px]">
           <thead>
             <tr style={{ background: 'hsl(var(--muted))' }}>
               {['Client', 'Property', 'Type', 'Value', 'Commission', 'Status', 'Closing Date', ''].map(h => (

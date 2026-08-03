@@ -34,7 +34,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   }
 
   return (
-    <div className="p-6 flex flex-col h-full">
+    <div className="p-4 sm:p-6 flex flex-col h-full">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Leads</h1>

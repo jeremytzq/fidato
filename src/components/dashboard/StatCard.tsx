@@ -27,27 +27,31 @@ export function StatCard({ title, value, subtitle, trend, iconName, iconColor = 
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.07, ease: 'easeOut' }}
       whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}
-      className="bg-card rounded-xl border border-border p-5 cursor-default transition-shadow"
+      className="bg-card rounded-xl border border-border p-3 sm:p-5 cursor-default transition-shadow"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{title}</p>
-          <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
-          {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
-          {trend && (
-            <div className={cn('flex items-center gap-1 mt-2 text-xs font-medium', positive ? 'text-green-600' : 'text-red-500')}>
-              {positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-              <span>{positive ? '+' : ''}{trend.value}% {trend.label}</span>
-            </div>
-          )}
-        </div>
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ml-4"
-          style={{ background: `${iconColor}18` }}
-        >
-          <Icon size={18} style={{ color: iconColor }} />
-        </div>
+      {/* Icon row */}
+      <div
+        className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3"
+        style={{ background: `${iconColor}18` }}
+      >
+        <Icon size={15} className="sm:hidden" style={{ color: iconColor }} />
+        <Icon size={18} className="hidden sm:block" style={{ color: iconColor }} />
       </div>
+      {/* Title */}
+      <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 sm:mb-3 leading-tight">
+        {title}
+      </p>
+      {/* Value */}
+      <p className="text-lg sm:text-2xl font-bold text-foreground tracking-tight leading-none">{value}</p>
+      {subtitle && (
+        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{subtitle}</p>
+      )}
+      {trend && (
+        <div className={cn('flex items-center gap-1 mt-2 text-xs font-medium', positive ? 'text-green-600' : 'text-red-500')}>
+          {positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+          <span>{positive ? '+' : ''}{trend.value}% {trend.label}</span>
+        </div>
+      )}
     </motion.div>
   )
 }
