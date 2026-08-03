@@ -22,6 +22,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   meta_extend: 'Could not extend the token. Please try again.',
   meta_pages: 'Could not fetch your Facebook pages.',
   meta_no_pages: 'No Facebook pages found. Make sure you manage at least one page.',
+  meta_save_failed: 'Pages were found but could not be saved. Check Vercel logs for details.',
 }
 
 export default function SettingsClient({ connections: initial, connected, error }: Props) {

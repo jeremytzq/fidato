@@ -46,9 +46,11 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient()
 
+  let saved = 0
   for (const page of pages) {
-    // Store connection
-    await supabase.from('meta_connections').upsert({
+    if (!page.access_token) continue
+
+    const { error: upsertError } = await supabase.from('meta_connections').upsert({
       user_id: userId,
       page_id: page.id,
       page_name: page.name,
@@ -56,8 +58,15 @@ export async function GET(request: NextRequest) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'page_id' })
 
+    if (upsertError) {
+      console.error('meta_connections upsert error:', upsertError)
+      continue
+    }
+
+    saved++
+
     // Subscribe page to webhook
-    await fetch(
+    const subRes = await fetch(
       `https://graph.facebook.com/v19.0/${page.id}/subscribed_apps`,
       {
         method: 'POST',
@@ -68,7 +77,12 @@ export async function GET(request: NextRequest) {
         }),
       }
     )
+    if (!subRes.ok) {
+      console.error('webhook subscribe error:', await subRes.text())
+    }
   }
+
+  if (saved === 0) return Response.redirect(`${appUrl}/settings?error=meta_save_failed`)
 
   return Response.redirect(`${appUrl}/settings?connected=true`)
 }
