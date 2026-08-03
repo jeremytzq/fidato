@@ -80,7 +80,7 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
       .single()
     if (clientErr) { setSaving(false); setError(clientErr.message); return }
 
-    const { error: txErr } = await supabase
+    const { data: txData, error: txErr } = await supabase
       .from('transactions')
       .insert({
         user_id: userId,
@@ -97,7 +97,23 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
         created_at: now,
         updated_at: now,
       })
+      .select('id')
+      .single()
     if (txErr) { setSaving(false); setError(txErr.message); return }
+
+    // Record commission in income table so P&L picks it up
+    if (commissionAmount > 0) {
+      const { error: incomeErr } = await supabase.from('income').insert({
+        user_id: userId,
+        transaction_id: txData.id,
+        category: 'Commission',
+        amount: commissionAmount,
+        description: `${lead.name} — ${form.property_address.trim()}`,
+        date: form.closing_date || now.slice(0, 10),
+        created_at: now,
+      })
+      if (incomeErr) { setSaving(false); setError(incomeErr.message); return }
+    }
 
     setSaving(false)
     onConverted()
