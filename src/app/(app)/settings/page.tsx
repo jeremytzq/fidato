@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { redirect } from 'next/navigation'
 import SettingsClient from '@/components/settings/SettingsClient'
 
 export default async function SettingsPage({
@@ -9,6 +10,7 @@ export default async function SettingsPage({
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const admin = createAdminClient()
   const { data: connections } = await admin
