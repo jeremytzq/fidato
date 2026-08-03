@@ -101,17 +101,15 @@ export default async function DashboardPage() {
       </div>
 
       {/* Charts + Recent leads */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
-        <div className="lg:col-span-3">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3 flex flex-col gap-4">
           <RevenueChart data={chartData} />
+          <LeadSourceChart data={sourceCounts} />
         </div>
         <div className="lg:col-span-2">
           <RecentLeads leads={leads} />
         </div>
       </div>
-
-      {/* Lead source chart */}
-      <LeadSourceChart data={sourceCounts} />
     </div>
   )
 }
