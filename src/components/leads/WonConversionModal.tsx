@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import type { Lead, TransactionType } from '@/types'
 
-const TRANSACTION_TYPES: TransactionType[] = ['Sale', 'Purchase', 'Rental', 'Lease']
+const TRANSACTION_TYPES: TransactionType[] = ['Lease', 'Purchase', 'Rental', 'Sale']
 
 interface WonConversionModalProps {
   open: boolean

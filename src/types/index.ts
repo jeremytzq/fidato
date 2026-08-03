@@ -1,12 +1,12 @@
 export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Negotiating' | 'Won' | 'Lost'
 export type LeadGrade = 'A' | 'B' | 'C'
 export type ClientType = 'Hot' | 'Warm' | 'Cold'
-export type LeadSource = 'Referral' | 'Website' | 'Meta Ads' | 'Google PPC' | 'Cold Call' | 'Walk-in' | 'Doorknock' | 'Roadshow' | 'Flyers / Mailers' | 'Other'
-export type PropertyType = 'HDB' | 'Condo' | 'Landed' | 'Commercial' | 'Industrial' | 'Other'
-export type TransactionType = 'Sale' | 'Purchase' | 'Rental' | 'Lease'
+export type LeadSource = 'Cold Call' | 'Doorknock' | 'Flyers / Mailers' | 'Google PPC' | 'Meta Ads' | 'Referral' | 'Roadshow' | 'Walk-in' | 'Website' | 'Other'
+export type PropertyType = 'Commercial' | 'Condo' | 'HDB' | 'Industrial' | 'Landed' | 'Other'
+export type TransactionType = 'Lease' | 'Purchase' | 'Rental' | 'Sale'
 export type TransactionStatus = 'Active' | 'Completed' | 'Pending' | 'Cancelled'
-export type ExpenseCategory = 'Office Rent' | 'Advertising' | 'Staging' | 'Insurance' | 'Photography' | 'Licensing' | 'Travel' | 'Other'
-export type IncomeCategory = 'Commission' | 'Referral Fee' | 'Consultation' | 'Other'
+export type ExpenseCategory = 'Advertising' | 'Insurance' | 'Licensing' | 'Office Rent' | 'Photography' | 'Staging' | 'Travel' | 'Other'
+export type IncomeCategory = 'Commission' | 'Consultation' | 'Referral Fee' | 'Other'
 
 export interface Lead {
   id: string

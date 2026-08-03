@@ -13,8 +13,8 @@ import type { Income, Expense, IncomeCategory, ExpenseCategory } from '@/types'
 import { formatCurrency, formatPercent } from '@/utils/format'
 import { NumberInput } from '@/components/ui/NumberInput'
 
-const INCOME_CATS: IncomeCategory[] = ['Commission', 'Referral Fee', 'Consultation', 'Other']
-const EXPENSE_CATS: ExpenseCategory[] = ['Office Rent', 'Advertising', 'Staging', 'Insurance', 'Photography', 'Licensing', 'Travel', 'Other']
+const INCOME_CATS: IncomeCategory[] = ['Commission', 'Consultation', 'Referral Fee', 'Other']
+const EXPENSE_CATS: ExpenseCategory[] = ['Advertising', 'Insurance', 'Licensing', 'Office Rent', 'Photography', 'Staging', 'Travel', 'Other']
 
 const CHART_TOOLTIP = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null

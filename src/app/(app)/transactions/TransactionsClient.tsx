@@ -13,8 +13,8 @@ import type { Transaction, TransactionType, TransactionStatus } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { NumberInput } from '@/components/ui/NumberInput'
 
-const TX_TYPES: TransactionType[] = ['Sale', 'Purchase', 'Rental', 'Lease']
-const TX_STATUSES: TransactionStatus[] = ['Active', 'Pending', 'Completed', 'Cancelled']
+const TX_TYPES: TransactionType[] = ['Lease', 'Purchase', 'Rental', 'Sale']
+const TX_STATUSES: TransactionStatus[] = ['Active', 'Cancelled', 'Completed', 'Pending']
 
 function TxModal({ open, onClose, tx, userId, onSaved }: {
   open: boolean; onClose: () => void; tx: Transaction | null
