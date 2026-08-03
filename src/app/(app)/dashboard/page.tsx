@@ -44,14 +44,13 @@ async function getDashboardData(userId: string) {
   }
 
   // Lead source breakdown
-  const sourceCounts = Object.entries(
-    leads.reduce((acc, lead) => {
-      const src = lead.source || 'Other'
-      acc[src] = (acc[src] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-  )
-    .map(([source, count]) => ({ source, count }))
+  const sourceMap = leads.reduce((acc, lead) => {
+    const src = lead.source || 'Other'
+    acc[src] = (acc[src] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+  const sourceCounts = Object.keys(sourceMap)
+    .map(source => ({ source, count: sourceMap[source] }))
     .sort((a, b) => b.count - a.count)
 
   return {
