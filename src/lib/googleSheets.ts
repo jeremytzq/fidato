@@ -1,17 +1,19 @@
-import type { Lead, LeadStatus, LeadGrade, LeadSource, PropertyType, Client } from '@/types'
+import type { Lead, LeadStatus, LeadGrade, LeadSource, PropertyType, ClientType, Client } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets'
 
 // ID is last so the sheet reads naturally; it's the anchor for 2-way sync
 const HEADERS = [
-  'Name', 'Phone', 'Email', 'Status', 'Grade',
-  'Property Type', 'Budget (SGD)', 'Source',
+  'Name', 'Mobile', 'WhatsApp', 'Email', 'Status', 'Grade', 'Client Type',
+  'Property Type', 'Budget (SGD)', 'Source', 'Project Interested',
+  'Birthday', 'Property Address', 'Correspondence Address',
   'Follow-up Date', 'Notes', 'Created', 'ID',
 ]
 
 const VALID_STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
 const VALID_GRADES: LeadGrade[] = ['A', 'B', 'C']
+const VALID_CLIENT_TYPES: ClientType[] = ['Hot', 'Warm', 'Cold']
 const VALID_SOURCES: LeadSource[] = ['Referral', 'Website', 'Social Media', 'Cold Call', 'Walk-in', 'Other']
 const VALID_PROPERTY_TYPES: PropertyType[] = ['HDB', 'Condo', 'Landed', 'Commercial', 'Industrial', 'Other']
 
@@ -76,19 +78,25 @@ export async function pushLeadsToGoogleSheets(leads: Lead[]): Promise<string> {
   const rows = leads.map(l => [
     l.name,
     l.phone ?? '',
+    l.whatsapp_number ?? '',
     l.email ?? '',
     l.status,
     l.grade ?? '',
+    l.client_type ?? '',
     l.property_type ?? '',
     l.budget != null ? l.budget : '',
     l.source ?? '',
+    l.project_interested ?? '',
+    l.birthday ?? '',
+    l.property_address ?? '',
+    l.correspondence_address ?? '',
     l.follow_up_date ?? '',
     l.notes ?? '',
     l.created_at.slice(0, 10),
     l.id,
   ])
 
-  await fetch(`${API}/${sheetId}/values/Leads!A:L:clear`, {
+  await fetch(`${API}/${sheetId}/values/Leads!A:R:clear`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -140,7 +148,7 @@ export async function pullLeadsFromGoogleSheets(userId: string): Promise<{ updat
   const sheetId = await getStoredSheetId()
   if (!sheetId) throw new Error('No sheet found. Push your leads to Google Sheets first.')
 
-  const res = await fetch(`${API}/${sheetId}/values/Leads!A1:L`, {
+  const res = await fetch(`${API}/${sheetId}/values/Leads!A1:R`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (res.status === 401) throw new Error('Google session expired. Sign out and sign back in.')
@@ -155,19 +163,25 @@ export async function pullLeadsFromGoogleSheets(userId: string): Promise<{ updat
   let updated = 0, created = 0
 
   for (const row of rows.slice(1)) {
-    const [name, phone, email, status, grade, property_type, budget, source, follow_up_date, notes, , id] = row
+    const [name, phone, whatsapp_number, email, status, grade, client_type, property_type, budget, source, project_interested, birthday, property_address, correspondence_address, follow_up_date, notes, , id] = row
     if (!name?.trim()) continue
 
     const payload = {
       user_id: userId,
       name: name.trim(),
       phone: phone?.trim() || null,
+      whatsapp_number: whatsapp_number?.trim() || null,
       email: email?.trim() || null,
       status: (VALID_STATUSES.includes(status as LeadStatus) ? status : 'New') as LeadStatus,
       grade: (VALID_GRADES.includes(grade as LeadGrade) ? grade : null) as LeadGrade | null,
+      client_type: (VALID_CLIENT_TYPES.includes(client_type as ClientType) ? client_type : null) as ClientType | null,
       property_type: (VALID_PROPERTY_TYPES.includes(property_type as PropertyType) ? property_type : null) as PropertyType | null,
       budget: budget ? parseInt(budget.replace(/[^0-9]/g, '')) || null : null,
       source: (VALID_SOURCES.includes(source as LeadSource) ? source : null) as LeadSource | null,
+      project_interested: project_interested?.trim() || null,
+      birthday: birthday?.trim() || null,
+      property_address: property_address?.trim() || null,
+      correspondence_address: correspondence_address?.trim() || null,
       follow_up_date: follow_up_date?.trim() || null,
       notes: notes?.trim() || null,
       updated_at: now,

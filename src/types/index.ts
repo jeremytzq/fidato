@@ -1,5 +1,6 @@
 export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Negotiating' | 'Won' | 'Lost'
 export type LeadGrade = 'A' | 'B' | 'C'
+export type ClientType = 'Hot' | 'Warm' | 'Cold'
 export type LeadSource = 'Referral' | 'Website' | 'Social Media' | 'Cold Call' | 'Walk-in' | 'Other'
 export type PropertyType = 'HDB' | 'Condo' | 'Landed' | 'Commercial' | 'Industrial' | 'Other'
 export type TransactionType = 'Sale' | 'Purchase' | 'Rental' | 'Lease'
@@ -13,11 +14,17 @@ export interface Lead {
   name: string
   email: string | null
   phone: string | null
+  whatsapp_number: string | null
   status: LeadStatus
   grade: LeadGrade | null
+  client_type: ClientType | null
   source: LeadSource | null
   property_type: PropertyType | null
   budget: number | null
+  project_interested: string | null
+  birthday: string | null
+  property_address: string | null
+  correspondence_address: string | null
   notes: string | null
   follow_up_date: string | null
   reminder_at: string | null

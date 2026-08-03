@@ -7,12 +7,18 @@ import { NumberInput } from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { Phone, MessageCircle } from 'lucide-react'
-import type { Lead, LeadStatus, LeadSource, PropertyType, LeadGrade, ActivityLog } from '@/types'
+import type { Lead, LeadStatus, LeadSource, PropertyType, LeadGrade, ClientType, ActivityLog } from '@/types'
 import { cn } from '@/utils/cn'
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
 const SOURCES: LeadSource[] = ['Referral', 'Website', 'Social Media', 'Cold Call', 'Walk-in', 'Other']
 const PROPERTY_TYPES: PropertyType[] = ['HDB', 'Condo', 'Landed', 'Commercial', 'Industrial', 'Other']
+
+const CLIENT_TYPE_OPTIONS: { value: ClientType; emoji: string; style: string; active: string }[] = [
+  { value: 'Hot',  emoji: '🔥', style: 'border-border text-muted-foreground hover:border-red-300',    active: 'bg-red-50 border-red-400 text-red-600' },
+  { value: 'Warm', emoji: '☀️', style: 'border-border text-muted-foreground hover:border-amber-300', active: 'bg-amber-50 border-amber-400 text-amber-600' },
+  { value: 'Cold', emoji: '🧊', style: 'border-border text-muted-foreground hover:border-blue-300',  active: 'bg-blue-50 border-blue-400 text-blue-600' },
+]
 
 const GRADE_OPTIONS: { value: LeadGrade; label: string; desc: string; style: string; active: string }[] = [
   { value: 'A', label: 'A', desc: 'Urgent & Motivated', style: 'border-border text-muted-foreground hover:border-red-300', active: 'bg-red-50 border-red-400 text-red-600' },
@@ -41,8 +47,13 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
   const [saveError, setSaveError] = useState<string | null>(null)
   const [activities, setActivities] = useState<ActivityLog[]>([])
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', status: defaultStatus, source: '' as LeadSource | '',
-    property_type: '' as PropertyType | '', budget: '', notes: '', follow_up_date: '',
+    name: '', email: '', phone: '', whatsapp_number: '',
+    status: defaultStatus, source: '' as LeadSource | '',
+    property_type: '' as PropertyType | '', budget: '',
+    client_type: '' as ClientType | '',
+    project_interested: '', birthday: '',
+    property_address: '', correspondence_address: '',
+    notes: '', follow_up_date: '',
     grade: '' as LeadGrade | '', reminder_at: '',
   })
 
@@ -53,17 +64,23 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
         name: lead.name,
         email: lead.email || '',
         phone: lead.phone || '',
+        whatsapp_number: lead.whatsapp_number || '',
         status: lead.status,
         source: lead.source || '',
         property_type: lead.property_type || '',
         budget: lead.budget ? String(lead.budget) : '',
+        client_type: lead.client_type || '',
+        project_interested: lead.project_interested || '',
+        birthday: lead.birthday || '',
+        property_address: lead.property_address || '',
+        correspondence_address: lead.correspondence_address || '',
         notes: lead.notes || '',
         follow_up_date: lead.follow_up_date || '',
         grade: lead.grade || '',
         reminder_at: lead.reminder_at ? lead.reminder_at.slice(0, 16) : '',
       })
     } else {
-      setForm({ name: '', email: '', phone: '', status: defaultStatus, source: '', property_type: '', budget: '', notes: '', follow_up_date: '', grade: '', reminder_at: '' })
+      setForm({ name: '', email: '', phone: '', whatsapp_number: '', status: defaultStatus, source: '', property_type: '', budget: '', client_type: '', project_interested: '', birthday: '', property_address: '', correspondence_address: '', notes: '', follow_up_date: '', grade: '', reminder_at: '' })
     }
   }, [lead, defaultStatus, open])
 
@@ -82,6 +99,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
     setForm(f => ({ ...f, [k]: e.target.value }))
 
   const toggleGrade = (g: LeadGrade) => setForm(f => ({ ...f, grade: f.grade === g ? '' : g }))
+  const toggleClientType = (t: ClientType) => setForm(f => ({ ...f, client_type: f.client_type === t ? '' : t }))
 
   const handleSave = async () => {
     if (!form.name.trim()) return
@@ -92,10 +110,16 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
       name: form.name.trim(),
       email: form.email || null,
       phone: form.phone || null,
+      whatsapp_number: form.whatsapp_number || null,
       status: form.status,
       source: (form.source as LeadSource) || null,
       property_type: (form.property_type as PropertyType) || null,
       budget: form.budget ? parseInt(form.budget) : null,
+      client_type: (form.client_type as ClientType) || null,
+      project_interested: form.project_interested || null,
+      birthday: form.birthday || null,
+      property_address: form.property_address || null,
+      correspondence_address: form.correspondence_address || null,
       notes: form.notes || null,
       follow_up_date: form.follow_up_date || null,
       grade: (form.grade as LeadGrade) || null,
@@ -131,8 +155,11 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
           <div className="col-span-2">
             <Input label="Full Name *" value={form.name} onChange={set('name')} placeholder="John Tan" />
           </div>
-          <Input label="Email" type="email" value={form.email} onChange={set('email')} placeholder="john@email.com" />
-          <Input label="Phone" type="tel" value={form.phone} onChange={set('phone')} placeholder="9123 4567" />
+          <Input label="Mobile Number" type="tel" value={form.phone} onChange={set('phone')} placeholder="9123 4567" />
+          <Input label="WhatsApp Number" type="tel" value={form.whatsapp_number} onChange={set('whatsapp_number')} placeholder="9123 4567" />
+          <div className="col-span-2">
+            <Input label="Email" type="email" value={form.email} onChange={set('email')} placeholder="john@email.com" />
+          </div>
           <Select label="Status" value={form.status} onChange={set('status')}>
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </Select>
@@ -151,7 +178,36 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
             placeholder="500,000"
           />
           <div className="col-span-2">
-            <Input label="Follow-up Date" type="date" value={form.follow_up_date} onChange={set('follow_up_date')} />
+            <Input label="Project Interested" value={form.project_interested} onChange={set('project_interested')} placeholder="e.g. The Arden, Lentor Modern" />
+          </div>
+          <div className="col-span-2">
+            <Input label="Property Address" value={form.property_address} onChange={set('property_address')} placeholder="e.g. 123 Orchard Road #10-01" />
+          </div>
+          <div className="col-span-2">
+            <Input label="Correspondence Address" value={form.correspondence_address} onChange={set('correspondence_address')} placeholder="Mailing address" />
+          </div>
+          <Input label="Birthday" type="date" value={form.birthday} onChange={set('birthday')} />
+          <Input label="Follow-up Date" type="date" value={form.follow_up_date} onChange={set('follow_up_date')} />
+        </div>
+
+        {/* Client Type */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Client Type</label>
+          <div className="flex gap-2">
+            {CLIENT_TYPE_OPTIONS.map(t => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => toggleClientType(t.value)}
+                className={cn(
+                  'flex-1 py-2 px-2 rounded-lg text-center border-2 transition-colors',
+                  form.client_type === t.value ? t.active : `bg-card ${t.style}`
+                )}
+              >
+                <span className="block text-base">{t.emoji}</span>
+                <span className="block text-xs font-semibold mt-0.5">{t.value}</span>
+              </button>
+            ))}
           </div>
         </div>
 
