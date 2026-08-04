@@ -43,15 +43,17 @@ async function getDashboardData(userId: string) {
     months.push({ month: label, income: inc, expenses: exp, profit: inc - exp })
   }
 
-  // Lead source breakdown
+  // Lead source breakdown with conversion
   const sourceMap = leads.reduce((acc, lead) => {
     const src = lead.source || 'Other'
-    acc[src] = (acc[src] || 0) + 1
+    if (!acc[src]) acc[src] = { total: 0, converted: 0 }
+    acc[src].total += 1
+    if (lead.status === 'Won') acc[src].converted += 1
     return acc
-  }, {} as Record<string, number>)
+  }, {} as Record<string, { total: number; converted: number }>)
   const sourceCounts = Object.keys(sourceMap)
-    .map(source => ({ source, count: sourceMap[source] }))
-    .sort((a, b) => b.count - a.count)
+    .map(source => ({ source, total: sourceMap[source].total, converted: sourceMap[source].converted }))
+    .sort((a, b) => b.total - a.total)
 
   return {
     leads: leads.slice(0, 6),
