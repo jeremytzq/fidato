@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Phone, MessageCircle } from 'lucide-react'
 import type { Lead, LeadStatus, LeadSource, PropertyType, LeadGrade, ClientType, ActivityLog } from '@/types'
 import { cn } from '@/utils/cn'
+import { scheduleCadence } from '@/lib/cadence'
+import { FollowUpCadence } from './FollowUpCadence'
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
 const SOURCES: LeadSource[] = ['Cold Call', 'Doorknock', 'Flyers / Mailers', 'Google PPC', 'Meta Ads', 'Referral', 'Roadshow', 'Walk-in', 'Website', 'Other']
@@ -128,15 +130,23 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
       reminder_at: form.reminder_at ? new Date(form.reminder_at).toISOString() : null,
       updated_at: new Date().toISOString(),
     }
-    const { error } = lead
-      ? await supabase.from('leads').update(payload).eq('id', lead.id)
-      : await supabase.from('leads').insert({ ...payload, created_at: new Date().toISOString() })
-
-    setSaving(false)
-    if (error) {
-      setSaveError(error.message)
-      return
+    if (lead) {
+      const { error } = await supabase.from('leads').update(payload).eq('id', lead.id)
+      setSaving(false)
+      if (error) { setSaveError(error.message); return }
+    } else {
+      const { data: newLead, error } = await supabase
+        .from('leads')
+        .insert({ ...payload, created_at: new Date().toISOString() })
+        .select()
+        .single()
+      setSaving(false)
+      if (error) { setSaveError(error.message); return }
+      if (newLead && form.client_type === 'Cold') {
+        await scheduleCadence(supabase, userId, newLead.id)
+      }
     }
+
     onSaved()
     onClose()
   }
@@ -262,6 +272,18 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
             className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-colors"
           />
         </div>
+
+        {/* Cold lead cadence info for new leads */}
+        {!lead && form.client_type === 'Cold' && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2.5 text-xs text-blue-700">
+            <span className="font-semibold">8-step follow-up cadence</span> will be auto-scheduled for this cold lead (Day 1 → 30).
+          </div>
+        )}
+
+        {/* Cadence timeline for existing cold leads */}
+        {lead && lead.client_type === 'Cold' && (
+          <FollowUpCadence lead={lead} userId={userId} />
+        )}
 
         {/* Activity timeline */}
         {lead && activities.length > 0 && (

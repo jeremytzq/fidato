@@ -3,6 +3,7 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { RecentLeads } from '@/components/dashboard/RecentActivity'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
 import { LeadSourceChart } from '@/components/dashboard/LeadSourceChart'
+import { TodayFollowUps } from '@/components/dashboard/TodayFollowUps'
 import { formatCurrency } from '@/utils/format'
 import type { MonthlyPnL } from '@/types'
 
@@ -11,12 +12,14 @@ export const dynamic = 'force-dynamic'
 async function getDashboardData(userId: string) {
   const supabase = createClient()
 
-  const [leadsRes, clientsRes, txRes, incomeRes, expenseRes] = await Promise.all([
+  const today = new Date().toISOString().split('T')[0]
+  const [leadsRes, clientsRes, txRes, incomeRes, expenseRes, followUpsRes] = await Promise.all([
     supabase.from('leads').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
     supabase.from('clients').select('id').eq('user_id', userId),
     supabase.from('transactions').select('*').eq('user_id', userId),
     supabase.from('income').select('amount, date, category').eq('user_id', userId),
     supabase.from('expenses').select('amount, date').eq('user_id', userId),
+    supabase.from('cadence_follow_ups').select('*, leads(name, phone, display_name)').eq('user_id', userId).eq('status', 'pending').lte('scheduled_date', today).order('scheduled_date', { ascending: true }).limit(15),
   ])
 
   const leads = leadsRes.data || []
@@ -24,6 +27,8 @@ async function getDashboardData(userId: string) {
   const transactions = txRes.data || []
   const incomes = incomeRes.data || []
   const expenses = expenseRes.data || []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const todayFollowUps = (followUpsRes.data || []) as any[]
 
   const totalIncome = incomes.reduce((s, r) => s + r.amount, 0)
   const totalExpenses = expenses.reduce((s, r) => s + r.amount, 0)
@@ -67,6 +72,7 @@ async function getDashboardData(userId: string) {
     },
     chartData: months,
     sourceCounts,
+    todayFollowUps,
   }
 }
 
@@ -75,7 +81,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { leads, stats, chartData, sourceCounts } = await getDashboardData(user.id)
+  const { leads, stats, chartData, sourceCounts, todayFollowUps } = await getDashboardData(user.id)
   const firstName = user.user_metadata?.full_name?.split(' ')[0] || 'there'
 
   const statCards = [
@@ -101,6 +107,13 @@ export default async function DashboardPage() {
           <StatCard key={s.title} {...s} index={i} />
         ))}
       </div>
+
+      {/* Today's follow-ups (only shown when there are pending items) */}
+      {todayFollowUps.length > 0 && (
+        <div className="mb-4">
+          <TodayFollowUps initialData={todayFollowUps} />
+        </div>
+      )}
 
       {/* Charts + Recent leads */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">

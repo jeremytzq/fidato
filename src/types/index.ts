@@ -152,3 +152,19 @@ export interface ShareLinkView {
   user_agent: string | null
   ip_address: string | null
 }
+
+export type CadenceChannel = 'call' | 'voicemail' | 'whatsapp'
+export type CadenceStatus = 'pending' | 'done' | 'skipped'
+
+export interface CadenceFollowUp {
+  id: string
+  user_id: string
+  lead_id: string
+  attempt_number: number
+  scheduled_date: string
+  channel: CadenceChannel
+  status: CadenceStatus
+  notes: string | null
+  completed_at: string | null
+  created_at: string
+}
