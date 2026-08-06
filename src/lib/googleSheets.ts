@@ -5,7 +5,7 @@ const API = 'https://sheets.googleapis.com/v4/spreadsheets'
 
 // ID is last so the sheet reads naturally; it's the anchor for 2-way sync
 const HEADERS = [
-  'Name', 'Mobile', 'WhatsApp', 'Email', 'Status', 'Grade', 'Client Type',
+  'Name', 'Display Name', 'Mobile', 'WhatsApp', 'Email', 'Status', 'Grade', 'Client Type',
   'Property Type', 'Budget (SGD)', 'Source', 'Project Interested',
   'Birthday', 'Property Address', 'Correspondence Address',
   'Follow-up Date', 'Notes', 'Created', 'ID',
@@ -77,6 +77,7 @@ export async function pushLeadsToGoogleSheets(leads: Lead[]): Promise<string> {
 
   const rows = leads.map(l => [
     l.name,
+    l.display_name ?? '',
     l.phone ?? '',
     l.whatsapp_number ?? '',
     l.email ?? '',
@@ -96,7 +97,7 @@ export async function pushLeadsToGoogleSheets(leads: Lead[]): Promise<string> {
     l.id,
   ])
 
-  await fetch(`${API}/${sheetId}/values/Leads!A:R:clear`, {
+  await fetch(`${API}/${sheetId}/values/Leads!A:S:clear`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -148,7 +149,7 @@ export async function pullLeadsFromGoogleSheets(userId: string): Promise<{ updat
   const sheetId = await getStoredSheetId()
   if (!sheetId) throw new Error('No sheet found. Push your leads to Google Sheets first.')
 
-  const res = await fetch(`${API}/${sheetId}/values/Leads!A1:R`, {
+  const res = await fetch(`${API}/${sheetId}/values/Leads!A1:S`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (res.status === 401) throw new Error('Google session expired. Sign out and sign back in.')
@@ -163,12 +164,13 @@ export async function pullLeadsFromGoogleSheets(userId: string): Promise<{ updat
   let updated = 0, created = 0
 
   for (const row of rows.slice(1)) {
-    const [name, phone, whatsapp_number, email, status, grade, client_type, property_type, budget, source, project_interested, birthday, property_address, correspondence_address, follow_up_date, notes, , id] = row
+    const [name, display_name, phone, whatsapp_number, email, status, grade, client_type, property_type, budget, source, project_interested, birthday, property_address, correspondence_address, follow_up_date, notes, , id] = row
     if (!name?.trim()) continue
 
     const payload = {
       user_id: userId,
       name: name.trim(),
+      display_name: display_name?.trim() || null,
       phone: phone?.trim() || null,
       whatsapp_number: whatsapp_number?.trim() || null,
       email: email?.trim() || null,
@@ -291,7 +293,7 @@ export async function clearGoogleSheets(): Promise<void> {
 
   // Clear data rows only (keep header row 1)
   await Promise.allSettled([
-    fetch(`${API}/${sheetId}/values/Leads!A2:R:clear`, {
+    fetch(`${API}/${sheetId}/values/Leads!A2:S:clear`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }),
