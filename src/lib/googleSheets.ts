@@ -15,7 +15,7 @@ const VALID_STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Negotiat
 const VALID_GRADES: LeadGrade[] = ['A', 'B', 'C']
 const VALID_CLIENT_TYPES: ClientType[] = ['Hot', 'Warm', 'Cold']
 const VALID_SOURCES: LeadSource[] = ['Cold Call', 'Doorknock', 'Flyers / Mailers', 'Google PPC', 'Meta Ads', 'Referral', 'Roadshow', 'Walk-in', 'Website', 'Other']
-const VALID_PROPERTY_TYPES: PropertyType[] = ['Commercial', 'Condo', 'HDB', 'Industrial', 'Landed', 'Other']
+const VALID_PROPERTY_TYPES: PropertyType[] = ['Commercial', 'Condo', 'EC', 'HDB', 'Industrial', 'Landed', 'Other']
 
 async function getProviderToken(): Promise<string> {
   const supabase = createClient()

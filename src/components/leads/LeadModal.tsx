@@ -14,7 +14,7 @@ import { FollowUpCadence } from './FollowUpCadence'
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
 const SOURCES: LeadSource[] = ['Cold Call', 'Doorknock', 'Flyers / Mailers', 'Google PPC', 'Meta Ads', 'Referral', 'Roadshow', 'Walk-in', 'Website', 'Other']
-const PROPERTY_TYPES: PropertyType[] = ['Commercial', 'Condo', 'HDB', 'Industrial', 'Landed', 'Other']
+const PROPERTY_TYPES: PropertyType[] = ['Commercial', 'Condo', 'EC', 'HDB', 'Industrial', 'Landed', 'Other']
 
 const CLIENT_TYPE_OPTIONS: { value: ClientType; emoji: string; style: string; active: string }[] = [
   { value: 'Hot',  emoji: '🔥', style: 'border-border text-muted-foreground hover:border-red-300',    active: 'bg-red-50 border-red-400 text-red-600' },

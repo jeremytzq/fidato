@@ -15,7 +15,7 @@ import { formatDate } from '@/utils/format'
 import { pushClientsToGoogleSheets, pullClientsFromGoogleSheets } from '@/lib/googleSheets'
 import { cn } from '@/utils/cn'
 
-const PROPERTY_TYPES: PropertyType[] = ['Commercial', 'Condo', 'HDB', 'Industrial', 'Landed', 'Other']
+const PROPERTY_TYPES: PropertyType[] = ['Commercial', 'Condo', 'EC', 'HDB', 'Industrial', 'Landed', 'Other']
 
 const CLIENT_TYPE_OPTIONS: { value: ClientType; emoji: string; style: string; active: string }[] = [
   { value: 'Hot',  emoji: '🔥', style: 'border-border text-muted-foreground hover:border-red-300',    active: 'bg-red-50 border-red-400 text-red-600' },

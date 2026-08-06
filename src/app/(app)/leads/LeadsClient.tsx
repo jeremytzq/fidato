@@ -7,8 +7,8 @@ import { KanbanBoard } from '@/components/leads/KanbanBoard'
 import { LeadModal } from '@/components/leads/LeadModal'
 import { WonConversionModal } from '@/components/leads/WonConversionModal'
 import { Button } from '@/components/ui/Button'
-import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink } from 'lucide-react'
-import type { Lead, LeadStatus } from '@/types'
+import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink, Search, X } from 'lucide-react'
+import type { Lead, LeadStatus, LeadGrade, ClientType, PropertyType } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
@@ -29,6 +29,8 @@ const GRADE_STYLES: Record<string, string> = {
   B: 'bg-amber-50 text-amber-600 border border-amber-200',
   C: 'bg-blue-50 text-blue-600 border border-blue-200',
 }
+
+const SELECT_CLS = 'h-8 rounded-lg border border-border bg-card px-2.5 pr-7 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none cursor-pointer'
 
 function MobileLeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit: (l: Lead) => void }) {
   return (
@@ -194,6 +196,38 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [syncError, setSyncError] = useState<string | null>(null)
   const [syncResult, setSyncResult] = useState<{ updated: number; created: number } | null>(null)
 
+  // Search & filter state
+  const [search, setSearch] = useState('')
+  const [filterGrade, setFilterGrade] = useState<LeadGrade | ''>('')
+  const [filterClientType, setFilterClientType] = useState<ClientType | ''>('')
+  const [filterPropertyType, setFilterPropertyType] = useState<PropertyType | ''>('')
+
+  const hasFilters = !!(search || filterGrade || filterClientType || filterPropertyType)
+
+  const filteredLeads = initialLeads.filter(l => {
+    if (filterGrade && l.grade !== filterGrade) return false
+    if (filterClientType && l.client_type !== filterClientType) return false
+    if (filterPropertyType && l.property_type !== filterPropertyType) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return (
+        l.name.toLowerCase().includes(q) ||
+        (l.display_name?.toLowerCase().includes(q) ?? false) ||
+        (l.phone?.includes(q) ?? false) ||
+        (l.email?.toLowerCase().includes(q) ?? false) ||
+        (l.project_interested?.toLowerCase().includes(q) ?? false)
+      )
+    }
+    return true
+  })
+
+  const clearFilters = () => {
+    setSearch('')
+    setFilterGrade('')
+    setFilterClientType('')
+    setFilterPropertyType('')
+  }
+
   const openAdd = (status: LeadStatus = 'New') => {
     setEditingLead(null)
     setDefaultStatus(status)
@@ -212,15 +246,13 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
     setSyncError(null)
     setSyncResult(null)
     try {
-      // 1. Pull any Sheets edits into Supabase (skip gracefully on first sync)
       let pullResult: { updated: number; created: number } = { updated: 0, created: 0 }
       try {
         pullResult = await pullLeadsFromGoogleSheets(userId)
-      } catch (e: any) {
-        if (!e.message?.includes('No sheet found')) throw e
+      } catch (e: unknown) {
+        if (!(e instanceof Error) || !e.message?.includes('No sheet found')) throw e
       }
 
-      // 2. Fetch fresh leads from Supabase so the push reflects any Sheet edits
       const supabase = createClient()
       const { data: freshLeads } = await supabase
         .from('leads')
@@ -228,25 +260,32 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
-      // 3. Push the complete up-to-date dataset back to Sheets
       const url = await pushLeadsToGoogleSheets((freshLeads ?? initialLeads) as Lead[])
 
       setSheetUrl(url)
       setSyncResult(pullResult)
       startTransition(() => router.refresh())
-    } catch (e: any) {
-      setSyncError(e.message)
+    } catch (e: unknown) {
+      setSyncError(e instanceof Error ? e.message : 'Sync failed')
     } finally {
       setSyncing(false)
     }
   }
 
+  // Key for kanban — remounts when filters change so internal state re-syncs
+  const kanbanKey = `${search}|${filterGrade}|${filterClientType}|${filterPropertyType}`
+
   return (
     <div className="p-4 sm:p-6 flex flex-col h-full">
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Leads</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{initialLeads.length} in pipeline</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {hasFilters
+              ? `${filteredLeads.length} of ${initialLeads.length} shown`
+              : `${initialLeads.length} in pipeline`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -262,6 +301,82 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
             <Plus size={15} /> Add Lead
           </Button>
         </div>
+      </div>
+
+      {/* Search + filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[160px] max-w-xs">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search name, phone, email…"
+            className="w-full h-8 rounded-lg border border-border bg-card pl-7 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X size={12} />
+            </button>
+          )}
+        </div>
+
+        {/* Grade */}
+        <div className="relative">
+          <select
+            value={filterGrade}
+            onChange={e => setFilterGrade(e.target.value as LeadGrade | '')}
+            className={cn(SELECT_CLS, filterGrade ? 'border-primary text-primary' : '')}
+          >
+            <option value="">Grade</option>
+            <option value="A">Grade A</option>
+            <option value="B">Grade B</option>
+            <option value="C">Grade C</option>
+          </select>
+        </div>
+
+        {/* Client Type */}
+        <div className="relative">
+          <select
+            value={filterClientType}
+            onChange={e => setFilterClientType(e.target.value as ClientType | '')}
+            className={cn(SELECT_CLS, filterClientType ? 'border-primary text-primary' : '')}
+          >
+            <option value="">Client Type</option>
+            <option value="Hot">🔥 Hot</option>
+            <option value="Warm">☀️ Warm</option>
+            <option value="Cold">🧊 Cold</option>
+          </select>
+        </div>
+
+        {/* Property Type */}
+        <div className="relative">
+          <select
+            value={filterPropertyType}
+            onChange={e => setFilterPropertyType(e.target.value as PropertyType | '')}
+            className={cn(SELECT_CLS, filterPropertyType ? 'border-primary text-primary' : '')}
+          >
+            <option value="">Property</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Condo">Condo</option>
+            <option value="EC">EC</option>
+            <option value="HDB">HDB</option>
+            <option value="Industrial">Industrial</option>
+            <option value="Landed">Landed</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        {/* Clear */}
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors"
+          >
+            <X size={11} /> Clear
+          </button>
+        )}
       </div>
 
       {sheetUrl && (
@@ -292,7 +407,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
       {/* Mobile: status-tab list */}
       <div className="flex-1 overflow-hidden md:hidden">
         <MobileLeadView
-          leads={initialLeads}
+          leads={filteredLeads}
           userId={userId}
           onEdit={openEdit}
           onAddLead={openAdd}
@@ -302,7 +417,8 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
       {/* Desktop: kanban board */}
       <div className="flex-1 overflow-x-auto hidden md:block">
         <KanbanBoard
-          initialLeads={initialLeads}
+          key={kanbanKey}
+          initialLeads={filteredLeads}
           userId={userId}
           onEdit={openEdit}
           onAddLead={openAdd}
