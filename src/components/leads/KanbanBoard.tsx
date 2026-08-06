@@ -191,13 +191,13 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon }: 
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4 min-h-0">
+      <div className="flex gap-4 h-full overflow-x-auto pb-4">
         {COLUMNS.map(col => {
           const colLeads = leads.filter(l => l.status === col.id)
           return (
-            <div key={col.id} className="flex-shrink-0 w-64">
-              {/* Column header */}
-              <div className="flex items-center justify-between mb-3">
+            <div key={col.id} className="flex-shrink-0 w-64 flex flex-col h-full min-h-0">
+              {/* Column header — stays pinned while cards scroll below */}
+              <div className="flex items-center justify-between mb-3 flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ background: col.color }} />
                   <span className="text-sm font-semibold text-foreground">{col.label}</span>
@@ -211,19 +211,21 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon }: 
                 </button>
               </div>
 
-              {/* Column body — registered as droppable so empty columns accept drops */}
-              <SortableContext items={colLeads.map(l => l.id)} strategy={verticalListSortingStrategy}>
-                <DroppableColumnBody colId={col.id} leads={colLeads}>
-                  <AnimatePresence>
-                    {colLeads.map(lead => (
-                      <LeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} />
-                    ))}
-                  </AnimatePresence>
-                  {colLeads.length === 0 && (
-                    <div className="text-center py-6 text-xs text-muted-foreground">Drop here</div>
-                  )}
-                </DroppableColumnBody>
-              </SortableContext>
+              {/* Scrollable column body */}
+              <div className="flex-1 overflow-y-auto min-h-0 pb-2">
+                <SortableContext items={colLeads.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                  <DroppableColumnBody colId={col.id} leads={colLeads}>
+                    <AnimatePresence>
+                      {colLeads.map(lead => (
+                        <LeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} />
+                      ))}
+                    </AnimatePresence>
+                    {colLeads.length === 0 && (
+                      <div className="text-center py-6 text-xs text-muted-foreground">Drop here</div>
+                    )}
+                  </DroppableColumnBody>
+                </SortableContext>
+              </div>
             </div>
           )
         })}

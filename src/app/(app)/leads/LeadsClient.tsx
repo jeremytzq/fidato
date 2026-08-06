@@ -415,7 +415,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
       </div>
 
       {/* Desktop: kanban board */}
-      <div className="flex-1 overflow-x-auto hidden md:block">
+      <div className="flex-1 overflow-hidden hidden md:block min-h-0">
         <KanbanBoard
           key={kanbanKey}
           initialLeads={filteredLeads}
