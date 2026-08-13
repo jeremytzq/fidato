@@ -6,7 +6,7 @@ import { Input, Select } from '@/components/ui/Input'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
-import { Phone, MessageCircle } from 'lucide-react'
+import { Phone, MessageCircle, Mail, Pencil } from 'lucide-react'
 import type { Lead, LeadStatus, LeadSource, PropertyType, LeadGrade, ClientType, ActivityLog } from '@/types'
 import { cn } from '@/utils/cn'
 import { scheduleCadence } from '@/lib/cadence'
@@ -16,6 +16,15 @@ const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Negotiating', 
 const SOURCES: LeadSource[] = ['Cold Call', 'Doorknock', 'Flyers / Mailers', 'Google PPC', 'Meta Ads', 'Referral', 'Roadshow', 'Walk-in', 'Website', 'Other']
 const PROPERTY_TYPES: PropertyType[] = ['Commercial', 'Condo', 'EC', 'HDB', 'Industrial', 'Landed', 'Other']
 
+const STATUS_CONFIG: Record<LeadStatus, { bg: string; text: string; border: string }> = {
+  New:         { bg: 'bg-slate-100',  text: 'text-slate-600',  border: 'border-slate-200' },
+  Contacted:   { bg: 'bg-blue-50',    text: 'text-blue-600',   border: 'border-blue-200' },
+  Qualified:   { bg: 'bg-amber-50',   text: 'text-amber-600',  border: 'border-amber-200' },
+  Negotiating: { bg: 'bg-purple-50',  text: 'text-purple-600', border: 'border-purple-200' },
+  Won:         { bg: 'bg-green-50',   text: 'text-green-600',  border: 'border-green-200' },
+  Lost:        { bg: 'bg-red-50',     text: 'text-red-500',    border: 'border-red-200' },
+}
+
 const CLIENT_TYPE_OPTIONS: { value: ClientType; emoji: string; style: string; active: string }[] = [
   { value: 'Hot',  emoji: '🔥', style: 'border-border text-muted-foreground hover:border-red-300',    active: 'bg-red-50 border-red-400 text-red-600' },
   { value: 'Warm', emoji: '☀️', style: 'border-border text-muted-foreground hover:border-amber-300', active: 'bg-amber-50 border-amber-400 text-amber-600' },
@@ -23,14 +32,23 @@ const CLIENT_TYPE_OPTIONS: { value: ClientType; emoji: string; style: string; ac
 ]
 
 const GRADE_OPTIONS: { value: LeadGrade; label: string; desc: string; style: string; active: string }[] = [
-  { value: 'A', label: 'A', desc: 'Urgent & Motivated', style: 'border-border text-muted-foreground hover:border-red-300', active: 'bg-red-50 border-red-400 text-red-600' },
-  { value: 'B', label: 'B', desc: 'Not Urgent, Motivated', style: 'border-border text-muted-foreground hover:border-amber-300', active: 'bg-amber-50 border-amber-400 text-amber-600' },
-  { value: 'C', label: 'C', desc: 'Not Urgent or Motivated', style: 'border-border text-muted-foreground hover:border-blue-300', active: 'bg-blue-50 border-blue-400 text-blue-600' },
+  { value: 'A', label: 'A', desc: 'Urgent & Motivated',      style: 'border-border text-muted-foreground hover:border-red-300',    active: 'bg-red-50 border-red-400 text-red-600' },
+  { value: 'B', label: 'B', desc: 'Not Urgent, Motivated',   style: 'border-border text-muted-foreground hover:border-amber-300', active: 'bg-amber-50 border-amber-400 text-amber-600' },
+  { value: 'C', label: 'C', desc: 'Not Urgent or Motivated', style: 'border-border text-muted-foreground hover:border-blue-300',  active: 'bg-blue-50 border-blue-400 text-blue-600' },
 ]
 
-function formatActivityTime(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-SG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const AVATAR_COLORS = ['#5B6CF8', '#E88C30', '#4CAF7D', '#E05C5C', '#8A6FA8', '#6786A1', '#364863']
+function avatarBg(name: string) {
+  return AVATAR_COLORS[name ? name.charCodeAt(0) % AVATAR_COLORS.length : 0]
+}
+
+function fmtActivityTime(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+function fmtDate(dateStr: string | null) {
+  if (!dateStr) return null
+  return new Date(dateStr).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 interface LeadModalProps {
@@ -44,10 +62,13 @@ interface LeadModalProps {
 
 export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, onSaved }: LeadModalProps) {
   const supabase = createClient()
+  const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [activities, setActivities] = useState<ActivityLog[]>([])
+
   const [form, setForm] = useState({
     name: '', display_name: '', email: '', phone: '', whatsapp_number: '',
     status: defaultStatus, source: '' as LeadSource | '',
@@ -61,6 +82,8 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
 
   useEffect(() => {
     setSaveError(null)
+    setConfirmDelete(false)
+    setMode(lead ? 'view' : 'edit')
     if (lead) {
       setForm({
         name: lead.name,
@@ -134,6 +157,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
       const { error } = await supabase.from('leads').update(payload).eq('id', lead.id)
       setSaving(false)
       if (error) { setSaveError(error.message); return }
+      setMode('view')
     } else {
       const { data: newLead, error } = await supabase
         .from('leads')
@@ -145,10 +169,10 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
       if (newLead && form.client_type === 'Cold') {
         await scheduleCadence(supabase, userId, newLead.id)
       }
+      onSaved()
+      onClose()
     }
-
     onSaved()
-    onClose()
   }
 
   const handleDelete = async () => {
@@ -160,8 +184,171 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
     onClose()
   }
 
+  const modalTitle = mode === 'view' && lead
+    ? (lead.display_name || lead.name)
+    : (lead ? 'Edit Lead' : 'Add Lead')
+
+  // ── View mode ──────────────────────────────────────────
+  if (mode === 'view' && lead) {
+    const displayName = lead.display_name || lead.name
+    const initial = displayName.charAt(0).toUpperCase()
+    const statusCfg = STATUS_CONFIG[lead.status]
+    const clientTypeCfg = CLIENT_TYPE_OPTIONS.find(o => o.value === lead.client_type)
+    const gradeOpt = GRADE_OPTIONS.find(g => g.value === lead.grade)
+    const waNum = (lead.whatsapp_number || lead.phone)?.replace(/\D/g, '')
+    const allActivities = [...activities, { id: 'added', action: 'Lead added', created_at: lead.created_at }]
+
+    return (
+      <Modal open={open} onClose={onClose} title={modalTitle} size="md">
+        <div className="-mx-6 -my-5">
+
+          {/* Profile header */}
+          <div className="px-6 py-5 text-center border-b border-border">
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white mx-auto mb-3"
+              style={{ background: avatarBg(lead.name) }}
+            >
+              {initial}
+            </div>
+            <div className="text-lg font-bold text-foreground">{displayName}</div>
+            {lead.display_name && lead.display_name !== lead.name && (
+              <div className="text-sm text-muted-foreground mt-0.5">{lead.name}</div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex justify-center gap-6 mt-4">
+              {lead.phone && (
+                <a href={`tel:${lead.phone}`} className="flex flex-col items-center gap-1.5 group">
+                  <div className="w-11 h-11 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 transition-colors">
+                    <Phone size={18} />
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">Call</span>
+                </a>
+              )}
+              {waNum && (
+                <a href={`https://wa.me/65${waNum}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
+                  <div className="w-11 h-11 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 transition-colors">
+                    <MessageCircle size={18} />
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">WhatsApp</span>
+                </a>
+              )}
+              {lead.email && (
+                <a href={`mailto:${lead.email}`} className="flex flex-col items-center gap-1.5 group">
+                  <div className="w-11 h-11 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-500 group-hover:bg-blue-100 transition-colors">
+                    <Mail size={18} />
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">Email</span>
+                </a>
+              )}
+              <button onClick={() => setMode('edit')} className="flex flex-col items-center gap-1.5 group">
+                <div className="w-11 h-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
+                  <Pencil size={16} />
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">Edit</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 space-y-4">
+            {/* Status chips */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-card border border-border rounded-xl p-3">
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Type</div>
+                {clientTypeCfg
+                  ? <div className="text-sm font-bold">{clientTypeCfg.emoji} {lead.client_type}</div>
+                  : <div className="text-sm text-muted-foreground">—</div>}
+              </div>
+              <div className="bg-card border border-border rounded-xl p-3">
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Grade</div>
+                {gradeOpt
+                  ? <div className={cn('text-sm font-bold', gradeOpt.active.split(' ').find(c => c.startsWith('text-')))}>{gradeOpt.label}</div>
+                  : <div className="text-sm text-muted-foreground">—</div>}
+              </div>
+              <div className="bg-card border border-border rounded-xl p-3">
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Stage</div>
+                <span className={cn('inline-block text-xs font-semibold px-2 py-0.5 rounded-full border', statusCfg.bg, statusCfg.text, statusCfg.border)}>
+                  {lead.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Detail fields */}
+            <div className="border border-border rounded-xl overflow-hidden divide-y divide-border">
+              {[
+                { label: 'Mobile',         value: lead.phone },
+                { label: 'WhatsApp',       value: lead.whatsapp_number || lead.phone },
+                { label: 'Email',          value: lead.email },
+                { label: 'Property Type',  value: lead.property_type },
+                { label: 'Budget',         value: lead.budget ? `$${lead.budget.toLocaleString()}` : null },
+                { label: 'Project',        value: lead.project_interested },
+                { label: 'Source',         value: lead.source },
+                { label: 'Follow-up',      value: fmtDate(lead.follow_up_date) },
+                { label: 'Birthday',       value: fmtDate(lead.birthday) },
+                { label: 'Property Addr.', value: lead.property_address },
+                { label: 'Correspondence', value: lead.correspondence_address },
+              ].filter(f => f.value).map(f => (
+                <div key={f.label} className="px-4 py-2.5">
+                  <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{f.label}</div>
+                  <div className="text-sm font-medium text-foreground">{f.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Notes */}
+            {lead.notes && (
+              <div>
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</div>
+                <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/40 rounded-xl px-3 py-2.5">{lead.notes}</div>
+              </div>
+            )}
+
+            {/* Cold lead cadence */}
+            {lead.client_type === 'Cold' && <FollowUpCadence lead={lead} userId={lead.user_id} />}
+
+            {/* Activity timeline */}
+            <div>
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Activity</div>
+              <div className="space-y-0">
+                {allActivities.map((a, i) => (
+                  <div key={a.id} className="flex gap-3">
+                    <div className="flex flex-col items-center w-4 flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-primary/50 mt-1.5" />
+                      {i < allActivities.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
+                    </div>
+                    <div className="pb-3">
+                      <div className="text-xs font-medium text-foreground">{a.action}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{fmtActivityTime(a.created_at)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Delete */}
+            <div className="pt-1">
+              {!confirmDelete ? (
+                <button onClick={() => setConfirmDelete(true)} className="w-full text-sm text-destructive/70 hover:text-destructive py-2 transition-colors">
+                  Delete Lead
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2 text-sm border border-border rounded-lg text-muted-foreground hover:bg-muted transition-colors">Cancel</button>
+                  <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 text-sm bg-destructive/10 border border-destructive/20 rounded-lg text-destructive hover:bg-destructive/20 transition-colors">
+                    {deleting ? 'Deleting…' : 'Confirm Delete'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
+    )
+  }
+
+  // ── Edit / Add form ────────────────────────────────────
   return (
-    <Modal open={open} onClose={onClose} title={lead ? 'Edit Lead' : 'Add Lead'} size="md">
+    <Modal open={open} onClose={onClose} title={modalTitle} size="md">
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
@@ -210,15 +397,8 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
           <label className="text-sm font-medium text-foreground">Client Type</label>
           <div className="flex gap-2">
             {CLIENT_TYPE_OPTIONS.map(t => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => toggleClientType(t.value)}
-                className={cn(
-                  'flex-1 py-2 px-2 rounded-lg text-center border-2 transition-colors',
-                  form.client_type === t.value ? t.active : `bg-card ${t.style}`
-                )}
-              >
+              <button key={t.value} type="button" onClick={() => toggleClientType(t.value)}
+                className={cn('flex-1 py-2 px-2 rounded-lg text-center border-2 transition-colors', form.client_type === t.value ? t.active : `bg-card ${t.style}`)}>
                 <span className="block text-base">{t.emoji}</span>
                 <span className="block text-xs font-semibold mt-0.5">{t.value}</span>
               </button>
@@ -226,20 +406,13 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
           </div>
         </div>
 
-        {/* Grade selector */}
+        {/* Grade */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Customer Grade</label>
           <div className="flex gap-2">
             {GRADE_OPTIONS.map(g => (
-              <button
-                key={g.value}
-                type="button"
-                onClick={() => toggleGrade(g.value)}
-                className={cn(
-                  'flex-1 py-2 px-2 rounded-lg text-center border-2 transition-colors',
-                  form.grade === g.value ? g.active : `bg-card ${g.style}`
-                )}
-              >
+              <button key={g.value} type="button" onClick={() => toggleGrade(g.value)}
+                className={cn('flex-1 py-2 px-2 rounded-lg text-center border-2 transition-colors', form.grade === g.value ? g.active : `bg-card ${g.style}`)}>
                 <span className="block text-sm font-bold">{g.label}</span>
                 <span className="block text-xs font-normal mt-0.5 leading-tight">{g.desc}</span>
               </button>
@@ -250,12 +423,8 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
         {/* Reminder */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Reminder</label>
-          <input
-            type="datetime-local"
-            value={form.reminder_at}
-            onChange={set('reminder_at')}
-            className="w-full h-9 rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-          />
+          <input type="datetime-local" value={form.reminder_at} onChange={set('reminder_at')}
+            className="w-full h-9 rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors" />
           {form.reminder_at && (
             <p className="text-xs text-muted-foreground">You&apos;ll receive a browser notification at this time.</p>
           )}
@@ -264,28 +433,18 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
         {/* Notes */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Notes</label>
-          <textarea
-            value={form.notes}
-            onChange={set('notes')}
-            rows={3}
-            placeholder="Any notes about this lead..."
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-colors"
-          />
+          <textarea value={form.notes} onChange={set('notes')} rows={3} placeholder="Any notes about this lead..."
+            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-colors" />
         </div>
 
-        {/* Cold lead cadence info for new leads */}
         {!lead && form.client_type === 'Cold' && (
           <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2.5 text-xs text-blue-700">
             <span className="font-semibold">8-step follow-up cadence</span> will be auto-scheduled for this cold lead (Day 1 → 30).
           </div>
         )}
 
-        {/* Cadence timeline for existing cold leads */}
-        {lead && lead.client_type === 'Cold' && (
-          <FollowUpCadence lead={lead} userId={userId} />
-        )}
+        {lead && lead.client_type === 'Cold' && <FollowUpCadence lead={lead} userId={userId} />}
 
-        {/* Activity timeline */}
         {lead && activities.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Activity</p>
@@ -297,7 +456,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
                     {a.action.includes('Call') ? <Phone size={10} /> : <MessageCircle size={10} />}
                     {a.action}
                   </span>
-                  <span className="text-muted-foreground ml-auto">{formatActivityTime(a.created_at)}</span>
+                  <span className="text-muted-foreground ml-auto">{fmtActivityTime(a.created_at)}</span>
                 </div>
               ))}
             </div>
@@ -311,11 +470,9 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
         )}
 
         <div className="flex items-center justify-between pt-2">
-          {lead ? (
-            <Button variant="destructive" size="sm" onClick={handleDelete} loading={deleting}>Delete</Button>
-          ) : <div />}
+          {lead ? <Button variant="destructive" size="sm" onClick={handleDelete} loading={deleting}>Delete</Button> : <div />}
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="secondary" onClick={() => lead ? setMode('view') : onClose()}>Cancel</Button>
             <Button onClick={handleSave} loading={saving}>{lead ? 'Save Changes' : 'Add Lead'}</Button>
           </div>
         </div>
