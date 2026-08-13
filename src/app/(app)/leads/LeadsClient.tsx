@@ -363,7 +363,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const filteredLeads = initialLeads.filter(l => {
     if (filterGrade && l.grade !== filterGrade) return false
     if (filterClientType && l.client_type !== filterClientType) return false
-    if (filterPropertyType && l.property_type !== filterPropertyType) return false
+    if (filterPropertyType && !l.property_type?.split(',').map(t => t.trim()).includes(filterPropertyType)) return false
     if (search) {
       const q = search.toLowerCase()
       return (

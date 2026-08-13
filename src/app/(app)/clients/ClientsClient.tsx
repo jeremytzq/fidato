@@ -25,7 +25,7 @@ const CLIENT_TYPE_OPTIONS: { value: ClientType; emoji: string; style: string; ac
 
 const EMPTY_FORM = {
   name: '', display_name: '', email: '', phone: '', whatsapp_number: '',
-  property_type: '' as PropertyType | '', budget: '',
+  property_type: [] as string[], budget: '',
   project_interested: '', birthday: '',
   property_address: '', correspondence_address: '',
   client_type: '' as ClientType | '', notes: '',
@@ -57,7 +57,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
       email: client.email || '',
       phone: client.phone || '',
       whatsapp_number: client.whatsapp_number || '',
-      property_type: client.property_type || '',
+      property_type: client.property_type ? client.property_type.split(',').map(t => t.trim()).filter(Boolean) : [],
       budget: client.budget ? String(client.budget) : '',
       project_interested: client.project_interested || '',
       birthday: client.birthday || '',
@@ -71,6 +71,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
 
   const set = (k: string) => (e: React.ChangeEvent<any>) => setForm(f => ({ ...f, [k]: e.target.value }))
   const toggleClientType = (t: ClientType) => setForm(f => ({ ...f, client_type: f.client_type === t ? '' : t }))
+  const togglePropertyType = (t: string) => setForm(f => ({ ...f, property_type: f.property_type.includes(t) ? f.property_type.filter(v => v !== t) : [...f.property_type, t] }))
 
   const handleSave = async (force = false) => {
     if (!form.name.trim()) return
@@ -92,7 +93,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
       email: form.email || null,
       phone: form.phone || null,
       whatsapp_number: form.whatsapp_number || null,
-      property_type: (form.property_type as PropertyType) || null,
+      property_type: form.property_type.length > 0 ? form.property_type.join(',') : null,
       budget: form.budget ? parseInt(form.budget) : null,
       project_interested: form.project_interested || null,
       birthday: form.birthday || null,
@@ -134,7 +135,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
       { label: 'Mobile',         value: client.phone,                                              icon: <Phone size={14} /> },
       { label: 'WhatsApp',       value: client.whatsapp_number || client.phone,                    icon: <MessageCircle size={14} /> },
       { label: 'Email',          value: client.email,                                              icon: <Mail size={14} /> },
-      { label: 'Property Type',  value: client.property_type,                                      icon: <Building2 size={14} /> },
+      { label: 'Property Type',  value: client.property_type ? client.property_type.split(',').map(t => t.trim()).join(', ') : null,   icon: <Building2 size={14} /> },
       { label: 'Budget',         value: client.budget ? formatCurrency(client.budget) : null,         icon: <Banknote size={14} /> },
       { label: 'Project',        value: client.project_interested,                                 icon: <MapPin size={14} /> },
       { label: 'Birthday',       value: client.birthday ? formatDate(client.birthday) : null,      icon: <Cake size={14} /> },
@@ -266,11 +267,25 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
           <div className="col-span-2">
             <Input label="Email" type="email" value={form.email} onChange={set('email')} placeholder="jane@email.com" />
           </div>
-          <Select label="Property Type" value={form.property_type} onChange={set('property_type')}>
-            <option value="">— Select type —</option>
-            {PROPERTY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </Select>
-          <NumberInput label="Budget (SGD)" value={form.budget} onChange={raw => setForm(f => ({ ...f, budget: raw }))} placeholder="500,000" />
+          <div className="col-span-2 space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Property Type</label>
+            <div className="flex flex-wrap gap-2">
+              {PROPERTY_TYPES.map(t => (
+                <button key={t} type="button" onClick={() => togglePropertyType(t)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors',
+                    form.property_type.includes(t)
+                      ? 'bg-primary/10 border-primary/40 text-primary'
+                      : 'bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                  )}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="col-span-2">
+            <NumberInput label="Budget (SGD)" value={form.budget} onChange={raw => setForm(f => ({ ...f, budget: raw }))} placeholder="500,000" />
+          </div>
           <div className="col-span-2">
             <Input label="Project Interested" value={form.project_interested} onChange={set('project_interested')} placeholder="e.g. The Arden, Lentor Modern" />
           </div>

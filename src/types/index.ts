@@ -21,7 +21,7 @@ export interface Lead {
   grade: LeadGrade | null
   client_type: ClientType | null
   source: LeadSource | null
-  property_type: PropertyType | null
+  property_type: string | null
   budget: number | null
   project_interested: string | null
   birthday: string | null
@@ -64,7 +64,7 @@ export interface Client {
   email: string | null
   phone: string | null
   whatsapp_number: string | null
-  property_type: PropertyType | null
+  property_type: string | null
   budget: number | null
   project_interested: string | null
   birthday: string | null

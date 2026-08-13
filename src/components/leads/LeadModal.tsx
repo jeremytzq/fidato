@@ -74,7 +74,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
   const [form, setForm] = useState({
     name: '', display_name: '', email: '', phone: '', whatsapp_number: '',
     status: defaultStatus, source: '' as LeadSource | '',
-    property_type: '' as PropertyType | '', budget: '',
+    property_type: [] as string[], budget: '',
     client_type: '' as ClientType | '',
     project_interested: '', birthday: '',
     property_address: '', correspondence_address: '',
@@ -95,7 +95,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
         whatsapp_number: lead.whatsapp_number || '',
         status: lead.status,
         source: lead.source || '',
-        property_type: lead.property_type || '',
+        property_type: lead.property_type ? lead.property_type.split(',').map(t => t.trim()).filter(Boolean) : [],
         budget: lead.budget ? String(lead.budget) : '',
         client_type: lead.client_type || '',
         project_interested: lead.project_interested || '',
@@ -108,7 +108,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
         reminder_at: lead.reminder_at ? lead.reminder_at.slice(0, 16) : '',
       })
     } else {
-      setForm({ name: '', display_name: '', email: '', phone: '', whatsapp_number: '', status: defaultStatus, source: '', property_type: '', budget: '', client_type: '', project_interested: '', birthday: '', property_address: '', correspondence_address: '', notes: '', follow_up_date: '', grade: '', reminder_at: '' })
+      setForm({ name: '', display_name: '', email: '', phone: '', whatsapp_number: '', status: defaultStatus, source: '', property_type: [], budget: '', client_type: '', project_interested: '', birthday: '', property_address: '', correspondence_address: '', notes: '', follow_up_date: '', grade: '', reminder_at: '' })
     }
   }, [lead, defaultStatus, open])
 
@@ -128,6 +128,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
 
   const toggleGrade = (g: LeadGrade) => setForm(f => ({ ...f, grade: f.grade === g ? '' : g }))
   const toggleClientType = (t: ClientType) => setForm(f => ({ ...f, client_type: f.client_type === t ? '' : t }))
+  const togglePropertyType = (t: string) => setForm(f => ({ ...f, property_type: f.property_type.includes(t) ? f.property_type.filter(v => v !== t) : [...f.property_type, t] }))
 
   const handleSave = async (force = false) => {
     if (!form.name.trim()) return
@@ -152,7 +153,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
       whatsapp_number: form.whatsapp_number || null,
       status: form.status,
       source: (form.source as LeadSource) || null,
-      property_type: (form.property_type as PropertyType) || null,
+      property_type: form.property_type.length > 0 ? form.property_type.join(',') : null,
       budget: form.budget ? parseInt(form.budget) : null,
       client_type: (form.client_type as ClientType) || null,
       project_interested: form.project_interested || null,
@@ -214,7 +215,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
       { label: 'Mobile',          value: lead.phone,                                          icon: <Phone size={14} /> },
       { label: 'WhatsApp',        value: lead.whatsapp_number || lead.phone,                  icon: <MessageCircle size={14} /> },
       { label: 'Email',           value: lead.email,                                          icon: <Mail size={14} /> },
-      { label: 'Property Type',   value: lead.property_type,                                  icon: <Building2 size={14} /> },
+      { label: 'Property Type',   value: lead.property_type ? lead.property_type.split(',').map(t => t.trim()).join(', ') : null,   icon: <Building2 size={14} /> },
       { label: 'Budget',          value: lead.budget ? formatCurrency(lead.budget) : null,         icon: <Banknote size={14} /> },
       { label: 'Project',         value: lead.project_interested,                             icon: <MapPin size={14} /> },
       { label: 'Source',          value: lead.source,                                         icon: <Zap size={14} /> },
@@ -386,16 +387,30 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
             <option value="">— Select source —</option>
             {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
           </Select>
-          <Select label="Property Type" value={form.property_type} onChange={set('property_type')}>
-            <option value="">— Select type —</option>
-            {PROPERTY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </Select>
-          <NumberInput
-            label="Budget (SGD)"
-            value={form.budget}
-            onChange={raw => setForm(f => ({ ...f, budget: raw }))}
-            placeholder="500,000"
-          />
+          <div className="col-span-2 space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Property Type</label>
+            <div className="flex flex-wrap gap-2">
+              {PROPERTY_TYPES.map(t => (
+                <button key={t} type="button" onClick={() => togglePropertyType(t)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors',
+                    form.property_type.includes(t)
+                      ? 'bg-primary/10 border-primary/40 text-primary'
+                      : 'bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                  )}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="col-span-2">
+            <NumberInput
+              label="Budget (SGD)"
+              value={form.budget}
+              onChange={raw => setForm(f => ({ ...f, budget: raw }))}
+              placeholder="500,000"
+            />
+          </div>
           <div className="col-span-2">
             <Input label="Project Interested" value={form.project_interested} onChange={set('project_interested')} placeholder="e.g. The Arden, Lentor Modern" />
           </div>
