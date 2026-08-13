@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDate, toTitleCase } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import {
-  Plus, Phone, MessageCircle, Mail, Pencil, Trash2,
+  Phone, MessageCircle, Mail, Pencil, Trash2,
   Search, X, Building2, Calendar, ChevronDown, ChevronUp,
   Users, UserPlus, Star, Clock, CheckCircle2, XCircle,
 } from 'lucide-react'
@@ -43,7 +43,98 @@ const STARTER_LIST = [
   'Choo Jin Eu', 'Daryl Yeo', 'Rachael Aang', 'Siddiq Alihaq', 'Pon Yong Leng',
 ]
 
-// ── Modal ──────────────────────────────────────────────────────────────────────
+// ── Bulk Edit Modal ────────────────────────────────────────────────────────────
+
+function BulkEditModal({ count, onClose, onSave, saving }: {
+  count: number
+  onClose: () => void
+  onSave: (fields: { status?: string; follow_up_date?: string }) => void
+  saving: boolean
+}) {
+  const [status, setStatus] = useState('')
+  const [followUp, setFollowUp] = useState('')
+
+  const hasValue = status !== '' || followUp !== ''
+
+  const handleSave = () => {
+    const payload: { status?: string; follow_up_date?: string } = {}
+    if (status) payload.status = status
+    if (followUp) payload.follow_up_date = followUp
+    if (Object.keys(payload).length === 0) return
+    onSave(payload)
+  }
+
+  const selectCls = 'w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer'
+  const inputCls = 'w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary'
+  const labelCls = 'block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Pencil size={14} className="text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-sm">Bulk Edit</p>
+              <p className="text-xs text-muted-foreground">{count} recruit{count !== 1 ? 's' : ''} selected</p>
+            </div>
+          </div>
+          <motion.button
+            onClick={onClose}
+            whileHover={{ rotate: 90 }}
+            transition={{ duration: 0.18 }}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+          >
+            <X size={16} />
+          </motion.button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          <p className="text-xs text-muted-foreground">Only filled fields will be applied. Leave blank to keep existing values.</p>
+          <div>
+            <label className={labelCls}>Status</label>
+            <select value={status} onChange={e => setStatus(e.target.value)} className={selectCls}>
+              <option value="">— keep existing —</option>
+              {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Follow-up Date</label>
+            <input type="date" value={followUp} onChange={e => setFollowUp(e.target.value)} className={inputCls} />
+          </div>
+        </div>
+
+        <div className="flex gap-2 px-5 pb-5">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!hasValue || saving}
+            className="flex-1 py-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Saving…' : 'Apply Changes'}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ── Recruit Modal ──────────────────────────────────────────────────────────────
 
 function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
   open: boolean
@@ -132,17 +223,16 @@ function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
     const waNum = recruit.phone?.replace(/\D/g, '')
 
     const fields = [
-      { label: 'Mobile',   value: recruit.phone,                                     icon: <Phone size={14} /> },
-      { label: 'WhatsApp', value: recruit.phone,                                     icon: <MessageCircle size={14} /> },
-      { label: 'Email',    value: recruit.email,                                     icon: <Mail size={14} /> },
-      { label: 'Agency',   value: recruit.current_agency,                            icon: <Building2 size={14} /> },
-      { label: 'Follow-up',value: recruit.follow_up_date ? formatDate(recruit.follow_up_date) : null, icon: <Calendar size={14} /> },
+      { label: 'Mobile',    value: recruit.phone,                                                         icon: <Phone size={14} /> },
+      { label: 'WhatsApp',  value: recruit.phone,                                                         icon: <MessageCircle size={14} /> },
+      { label: 'Email',     value: recruit.email,                                                         icon: <Mail size={14} /> },
+      { label: 'Agency',    value: recruit.current_agency,                                                icon: <Building2 size={14} /> },
+      { label: 'Follow-up', value: recruit.follow_up_date ? formatDate(recruit.follow_up_date) : null,    icon: <Calendar size={14} /> },
     ].filter(f => f.value)
 
     return (
       <Modal open={open} onClose={onClose} title={displayName} size="md">
         <div className="-mx-6 -my-5">
-          {/* Profile header */}
           <div className="px-6 pt-6 pb-5 text-center border-b border-border bg-card/50">
             <div
               className="rounded-full flex items-center justify-center text-2xl font-bold text-white mx-auto mb-3 ring-4 ring-background shadow-sm"
@@ -159,8 +249,6 @@ function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
                 {cfg.icon} {recruit.status}
               </span>
             </div>
-
-            {/* Action buttons */}
             <div className="flex justify-center gap-5 mt-5">
               {recruit.phone && (
                 <a href={`tel:${recruit.phone}`} className="flex flex-col items-center gap-1.5 group">
@@ -209,14 +297,12 @@ function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
                 ))}
               </div>
             )}
-
             {recruit.notes && (
               <div>
                 <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</div>
                 <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/40 border border-border rounded-2xl px-4 py-3">{recruit.notes}</div>
               </div>
             )}
-
             <div className="pt-1 border-t border-border">
               {!confirmDelete ? (
                 <button onClick={() => setConfirmDelete(true)} className="w-full text-sm text-destructive/60 hover:text-destructive py-2.5 transition-colors">
@@ -255,13 +341,11 @@ function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
           </Select>
           <Input label="Follow-up Date" type="date" value={form.follow_up_date} onChange={set('follow_up_date')} />
         </div>
-
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Notes</label>
           <textarea value={form.notes} onChange={set('notes')} rows={3} placeholder="Mutual connections, background, interest level..."
             className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-colors" />
         </div>
-
         {dupeWarning && (
           <div className="rounded-lg bg-amber-50 border border-amber-300 px-3 py-2.5 text-sm text-amber-800 space-y-2">
             <p><span className="font-semibold">Duplicate detected:</span> A recruit with this mobile number already exists — <span className="font-semibold">{dupeWarning}</span>.</p>
@@ -271,7 +355,6 @@ function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
             </div>
           </div>
         )}
-
         <div className="flex items-center justify-between pt-2">
           {recruit ? (
             <Button variant="destructive" size="sm" onClick={handleDelete} loading={deleting}>Delete</Button>
@@ -309,6 +392,11 @@ export default function RecruitmentClient({
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [seeding, setSeeding] = useState(false)
 
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkEditOpen, setBulkEditOpen] = useState(false)
+  const [bulkSaving, setBulkSaving] = useState(false)
+
   const handleSaved = () => startTransition(() => router.refresh())
 
   const openAdd = () => { setEditing(null); setModalOpen(true) }
@@ -344,6 +432,48 @@ export default function RecruitmentClient({
       return sortDir === 'asc' ? cmp : -cmp
     })
 
+  // Selection helpers
+  const filteredIds = filtered.map(r => r.id)
+  const allSelected = filteredIds.length > 0 && filteredIds.every(id => selectedIds.has(id))
+  const someSelected = filteredIds.some(id => selectedIds.has(id)) && !allSelected
+  const selectedCount = selectedIds.size
+
+  const toggleAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allSelected) filteredIds.forEach(id => next.delete(id))
+      else filteredIds.forEach(id => next.add(id))
+      return next
+    })
+  }
+
+  const toggleRow = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleBulkEdit = async (fields: { status?: string; follow_up_date?: string }) => {
+    setBulkSaving(true)
+    const ids = Array.from(selectedIds)
+    await supabase.from('recruitment_leads').update({ ...fields, updated_at: new Date().toISOString() }).in('id', ids)
+    setBulkSaving(false)
+    setBulkEditOpen(false)
+    setSelectedIds(new Set())
+    startTransition(() => router.refresh())
+  }
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size
+    if (!confirm(`Delete ${count} recruit${count !== 1 ? 's' : ''}? This cannot be undone.`)) return
+    await supabase.from('recruitment_leads').delete().in('id', Array.from(selectedIds))
+    setSelectedIds(new Set())
+    startTransition(() => router.refresh())
+  }
+
   // Pipeline counts
   const counts = STATUSES.reduce((acc, s) => {
     acc[s] = initialRecruits.filter(r => r.status === s).length
@@ -351,6 +481,8 @@ export default function RecruitmentClient({
   }, {} as Record<RecruitStatus, number>)
 
   const thCls = 'text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 py-3 cursor-pointer hover:text-foreground transition-colors select-none whitespace-nowrap'
+  const checkThCls = 'px-4 py-3 w-10'
+  const checkTdCls = 'px-4 py-3.5 w-10'
 
   function SortIcon({ col }: { col: string }) {
     if (sortKey !== col) return <ChevronUp size={12} className="opacity-20" />
@@ -439,6 +571,15 @@ export default function RecruitmentClient({
           <table className="w-full">
             <thead style={{ background: 'hsl(var(--muted))' }}>
               <tr>
+                <th className={checkThCls}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={el => { if (el) el.indeterminate = someSelected }}
+                    onChange={toggleAll}
+                    className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                  />
+                </th>
                 <th onClick={() => handleSort('name')} className={thCls}>
                   <span className="flex items-center gap-1">Name <SortIcon col="name" /></span>
                 </th>
@@ -465,11 +606,18 @@ export default function RecruitmentClient({
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.02, duration: 0.2 }}
-                    whileHover={{ backgroundColor: 'hsl(220 14% 94%)' }}
-                    className="transition-colors cursor-pointer"
-                    onClick={() => openEdit(r)}
+                    className={cn('transition-colors cursor-pointer', selectedIds.has(r.id) ? 'bg-primary/5' : 'hover:bg-muted/30')}
+                    onClick={() => toggleRow(r.id)}
                   >
-                    <td className="px-4 py-3.5">
+                    <td className={checkTdCls} onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(r.id)}
+                        onChange={() => toggleRow(r.id)}
+                        className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                      />
+                    </td>
+                    <td className="px-4 py-3.5" onClick={e => { e.stopPropagation(); openEdit(r) }}>
                       <div className="flex items-center gap-2.5">
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
@@ -480,17 +628,17 @@ export default function RecruitmentClient({
                         <span className="text-sm font-semibold text-foreground">{toTitleCase(r.name)}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5" onClick={e => { e.stopPropagation(); openEdit(r) }}>
                       <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border', cfg.bg, cfg.text, cfg.border)}>
                         {cfg.icon} {r.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-muted-foreground">{r.phone || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">{r.current_agency || '—'}</td>
-                    <td className="px-4 py-3.5 text-sm text-muted-foreground hidden md:table-cell whitespace-nowrap">
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground" onClick={e => { e.stopPropagation(); openEdit(r) }}>{r.phone || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground hidden sm:table-cell" onClick={e => { e.stopPropagation(); openEdit(r) }}>{r.current_agency || '—'}</td>
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground hidden md:table-cell whitespace-nowrap" onClick={e => { e.stopPropagation(); openEdit(r) }}>
                       {r.follow_up_date ? formatDate(r.follow_up_date) : '—'}
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-muted-foreground hidden lg:table-cell max-w-48">
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground hidden lg:table-cell max-w-48" onClick={e => { e.stopPropagation(); openEdit(r) }}>
                       <span className="line-clamp-1">{r.notes || '—'}</span>
                     </td>
                     <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
@@ -540,6 +688,54 @@ export default function RecruitmentClient({
           <p className="text-xs text-muted-foreground">{filtered.length} of {initialRecruits.length} recruits</p>
         </div>
       </div>
+
+      {/* Bulk action toolbar */}
+      <AnimatePresence>
+        {selectedCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 bg-foreground text-background rounded-2xl shadow-2xl border border-foreground/10"
+          >
+            <span className="text-sm font-semibold tabular-nums whitespace-nowrap">
+              {selectedCount} selected
+            </span>
+            <div className="w-px h-4 bg-background/20" />
+            <button
+              onClick={() => setBulkEditOpen(true)}
+              className="flex items-center gap-1.5 text-sm font-medium hover:opacity-70 transition-opacity"
+            >
+              <Pencil size={13} /> Edit
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 text-sm font-medium text-red-400 hover:text-red-300 transition-colors"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="ml-1 text-background/50 hover:text-background transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk edit modal */}
+      <AnimatePresence>
+        {bulkEditOpen && (
+          <BulkEditModal
+            count={selectedCount}
+            onClose={() => setBulkEditOpen(false)}
+            onSave={handleBulkEdit}
+            saving={bulkSaving}
+          />
+        )}
+      </AnimatePresence>
 
       <RecruitModal
         open={modalOpen}
