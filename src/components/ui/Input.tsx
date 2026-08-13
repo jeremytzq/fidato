@@ -14,7 +14,7 @@ export function Input({ label, error, className, ...props }: InputProps) {
       )}
       <input
         className={cn(
-          'w-full h-9 rounded-lg border border-border bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground',
+          'w-full h-10 rounded-lg border border-border bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground',
           'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
           'transition-colors',
           error && 'border-destructive focus:ring-destructive/30',
@@ -35,7 +35,7 @@ export function Select({ label, error, className, children, ...props }: InputPro
       )}
       <select
         className={cn(
-          'w-full h-9 rounded-lg border border-border bg-card px-3 text-sm text-foreground',
+          'w-full h-10 rounded-lg border border-border bg-card px-3 text-sm text-foreground',
           'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
           'transition-colors cursor-pointer',
           className

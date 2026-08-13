@@ -9,7 +9,7 @@ import { WonConversionModal } from '@/components/leads/WonConversionModal'
 import { Button } from '@/components/ui/Button'
 import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink, Search, X } from 'lucide-react'
 import type { Lead, LeadStatus, LeadGrade, ClientType, PropertyType } from '@/types'
-import { formatCurrency, formatDate } from '@/utils/format'
+import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
 import { pushLeadsToGoogleSheets, pullLeadsFromGoogleSheets } from '@/lib/googleSheets'
@@ -30,7 +30,7 @@ const GRADE_STYLES: Record<string, string> = {
   C: 'bg-blue-50 text-blue-600 border border-blue-200',
 }
 
-const SELECT_CLS = 'h-8 rounded-lg border border-border bg-card px-2.5 pr-7 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none cursor-pointer'
+const SELECT_CLS = 'h-9 rounded-lg border border-border bg-card px-3 pr-7 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none cursor-pointer'
 
 function MobileLeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit: (l: Lead) => void }) {
   return (
@@ -47,7 +47,7 @@ function MobileLeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; 
             {lead.name[0].toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{lead.name}</p>
+            <p className="text-sm font-semibold text-foreground truncate">{toTitleCase(lead.name)}</p>
             {lead.property_type && (
               <p className="text-xs text-muted-foreground">{lead.property_type}</p>
             )}
@@ -313,7 +313,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search name, phone, email…"
-            className="w-full h-8 rounded-lg border border-border bg-card pl-7 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            className="w-full h-9 rounded-lg border border-border bg-card pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -372,7 +372,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors"
+            className="flex items-center gap-1 h-9 px-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors"
           >
             <X size={11} /> Clear
           </button>

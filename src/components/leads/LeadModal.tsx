@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Phone, MessageCircle, Mail, Pencil, Building2, Banknote, MapPin, Zap, Calendar, Cake, Home, Tag } from 'lucide-react'
 import type { Lead, LeadStatus, LeadSource, PropertyType, LeadGrade, ClientType, ActivityLog } from '@/types'
 import { cn } from '@/utils/cn'
+import { toTitleCase, formatCurrency } from '@/utils/format'
 import { scheduleCadence } from '@/lib/cadence'
 import { FollowUpCadence } from './FollowUpCadence'
 
@@ -190,7 +191,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
 
   // ── View mode ──────────────────────────────────────────
   if (mode === 'view' && lead) {
-    const displayName = lead.display_name || lead.name
+    const displayName = toTitleCase(lead.display_name || lead.name)
     const initial = displayName.charAt(0).toUpperCase()
     const statusCfg = STATUS_CONFIG[lead.status]
     const clientTypeCfg = CLIENT_TYPE_OPTIONS.find(o => o.value === lead.client_type)
@@ -203,7 +204,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
       { label: 'WhatsApp',        value: lead.whatsapp_number || lead.phone,                  icon: <MessageCircle size={14} /> },
       { label: 'Email',           value: lead.email,                                          icon: <Mail size={14} /> },
       { label: 'Property Type',   value: lead.property_type,                                  icon: <Building2 size={14} /> },
-      { label: 'Budget',          value: lead.budget ? `$${lead.budget.toLocaleString()}` : null, icon: <Banknote size={14} /> },
+      { label: 'Budget',          value: lead.budget ? formatCurrency(lead.budget) : null,         icon: <Banknote size={14} /> },
       { label: 'Project',         value: lead.project_interested,                             icon: <MapPin size={14} /> },
       { label: 'Source',          value: lead.source,                                         icon: <Zap size={14} /> },
       { label: 'Follow-up',       value: fmtDate(lead.follow_up_date),                        icon: <Calendar size={14} /> },
@@ -226,7 +227,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
             </div>
             <div className="text-xl font-bold text-foreground tracking-tight">{displayName}</div>
             {lead.display_name && lead.display_name !== lead.name && (
-              <div className="text-sm text-muted-foreground mt-0.5">{lead.name}</div>
+              <div className="text-sm text-muted-foreground mt-0.5">{toTitleCase(lead.name)}</div>
             )}
 
             {/* Status pills inline under name */}
@@ -431,7 +432,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Reminder</label>
           <input type="datetime-local" value={form.reminder_at} onChange={set('reminder_at')}
-            className="w-full h-9 rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors" />
+            className="w-full h-10 rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors" />
           {form.reminder_at && (
             <p className="text-xs text-muted-foreground">You&apos;ll receive a browser notification at this time.</p>
           )}

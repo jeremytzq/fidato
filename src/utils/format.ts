@@ -1,3 +1,8 @@
+export function toTitleCase(str: string): string {
+  if (!str) return str
+  return str.toLowerCase().replace(/(?:^|\s|[-])\S/g, c => c.toUpperCase())
+}
+
 export function formatCurrency(amount: number, currency = 'SGD'): string {
   return new Intl.NumberFormat('en-SG', {
     style: 'currency',

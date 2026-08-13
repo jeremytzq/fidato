@@ -30,7 +30,7 @@ export function NumberInput({ label, value, onChange, className, placeholder, ..
           onChange(raw)
         }}
         className={cn(
-          'w-full h-9 rounded-lg border border-border bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors',
+          'w-full h-10 rounded-lg border border-border bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors',
           className
         )}
       />

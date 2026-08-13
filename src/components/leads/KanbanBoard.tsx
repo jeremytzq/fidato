@@ -8,7 +8,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Phone, MessageCircle, Plus, MoreHorizontal, Calendar, Bell } from 'lucide-react'
 import type { Lead, LeadStatus } from '@/types'
-import { formatCurrency, formatDate } from '@/utils/format'
+import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activity'
 import { cn } from '@/utils/cn'
@@ -74,7 +74,7 @@ function LeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit
               {lead.name[0].toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">{lead.name}</p>
+              <p className="text-sm font-semibold text-foreground truncate">{toTitleCase(lead.name)}</p>
               {lead.property_type && (
                 <p className="text-xs text-muted-foreground">{lead.property_type}</p>
               )}
@@ -242,7 +242,7 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon }: 
       <DragOverlay>
         {activeLead && (
           <div className="bg-card border border-primary rounded-xl p-4 shadow-xl w-64 opacity-90">
-            <p className="text-sm font-semibold text-foreground">{activeLead.name}</p>
+            <p className="text-sm font-semibold text-foreground">{toTitleCase(activeLead.name)}</p>
             {activeLead.phone && <p className="text-xs text-muted-foreground mt-1">{activeLead.phone}</p>}
           </div>
         )}

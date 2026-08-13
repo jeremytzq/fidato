@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Phone, MessageCircle, Mail, Pencil, Trash2, Search, FileSpreadsheet, ExternalLink, Building2, Banknote, MapPin, Cake, Home, Tag, Calendar } from 'lucide-react'
 import type { Client, PropertyType, ClientType } from '@/types'
-import { formatDate } from '@/utils/format'
+import { formatDate, toTitleCase, formatCurrency } from '@/utils/format'
 import { pushClientsToGoogleSheets, pullClientsFromGoogleSheets } from '@/lib/googleSheets'
 import { cn } from '@/utils/cn'
 
@@ -114,7 +114,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
 
   // ── View mode ──────────────────────────────────────────
   if (mode === 'view' && client) {
-    const displayName = client.display_name || client.name
+    const displayName = toTitleCase(client.display_name || client.name)
     const initial = displayName.charAt(0).toUpperCase()
     const clientTypeCfg = CLIENT_TYPE_OPTIONS.find(o => o.value === client.client_type)
     const waNum = (client.whatsapp_number || client.phone)?.replace(/\D/g, '')
@@ -124,7 +124,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
       { label: 'WhatsApp',       value: client.whatsapp_number || client.phone,                    icon: <MessageCircle size={14} /> },
       { label: 'Email',          value: client.email,                                              icon: <Mail size={14} /> },
       { label: 'Property Type',  value: client.property_type,                                      icon: <Building2 size={14} /> },
-      { label: 'Budget',         value: client.budget ? `$${client.budget.toLocaleString()}` : null, icon: <Banknote size={14} /> },
+      { label: 'Budget',         value: client.budget ? formatCurrency(client.budget) : null,         icon: <Banknote size={14} /> },
       { label: 'Project',        value: client.project_interested,                                 icon: <MapPin size={14} /> },
       { label: 'Birthday',       value: client.birthday ? formatDate(client.birthday) : null,      icon: <Cake size={14} /> },
       { label: 'Property Addr.', value: client.property_address,                                   icon: <Home size={14} /> },
@@ -146,7 +146,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
             </div>
             <div className="text-xl font-bold text-foreground tracking-tight">{displayName}</div>
             {client.display_name && client.display_name !== client.name && (
-              <div className="text-sm text-muted-foreground mt-0.5">{client.name}</div>
+              <div className="text-sm text-muted-foreground mt-0.5">{toTitleCase(client.name)}</div>
             )}
 
             {/* Client type chip */}
@@ -410,7 +410,7 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search clients..."
-          className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+          className="w-full h-10 pl-9 pr-3 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         />
       </div>
 
@@ -435,26 +435,35 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.02 }}
-                  className="hover:bg-muted/30 transition-colors"
+                  className="hover:bg-muted/30 transition-colors cursor-pointer"
+                  onClick={() => { setEditingClient(c); setModalOpen(true) }}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                        style={{ background: avatarBg(c.name) }}
+                      >
                         {c.name[0].toUpperCase()}
                       </div>
-                      <span className="text-sm font-medium text-foreground">{c.name}</span>
+                      <div>
+                        <span className="text-sm font-semibold text-foreground">{toTitleCase(c.name)}</span>
+                        {c.client_type && (
+                          <span className="ml-2 text-xs">{c.client_type === 'Hot' ? '🔥' : c.client_type === 'Warm' ? '☀️' : '🧊'}</span>
+                        )}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{c.phone || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{c.email || '—'}</td>
-                  <td className="px-4 py-3 hidden md:table-cell">
+                  <td className="px-4 py-3.5 text-sm text-muted-foreground">{c.phone || '—'}</td>
+                  <td className="px-4 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">{c.email || '—'}</td>
+                  <td className="px-4 py-3.5 hidden md:table-cell">
                     {c.property_type ? <Badge label={c.property_type} /> : <span className="text-sm text-muted-foreground">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground hidden lg:table-cell max-w-48">
+                  <td className="px-4 py-3.5 text-sm text-muted-foreground hidden lg:table-cell max-w-48">
                     <span className="line-clamp-1">{c.notes || '—'}</span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell whitespace-nowrap">{formatDate(c.created_at)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5 text-sm text-muted-foreground hidden md:table-cell whitespace-nowrap">{formatDate(c.created_at)}</td>
+                  <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       {c.phone && (
                         <>
