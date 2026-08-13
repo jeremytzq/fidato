@@ -44,6 +44,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [dupeWarning, setDupeWarning] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
 
   useEffect(() => {
@@ -71,8 +72,18 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
   const set = (k: string) => (e: React.ChangeEvent<any>) => setForm(f => ({ ...f, [k]: e.target.value }))
   const toggleClientType = (t: ClientType) => setForm(f => ({ ...f, client_type: f.client_type === t ? '' : t }))
 
-  const handleSave = async () => {
+  const handleSave = async (force = false) => {
     if (!form.name.trim()) return
+    if (!force && form.phone) {
+      let q = supabase.from('clients').select('id, name').eq('user_id', userId).eq('phone', form.phone.trim())
+      if (client) q = q.neq('id', client.id)
+      const { data: dupes } = await q.limit(1)
+      if (dupes && dupes.length > 0) {
+        setDupeWarning(dupes[0].name)
+        return
+      }
+    }
+    setDupeWarning(null)
     setSaving(true)
     const payload = {
       user_id: userId,
@@ -195,14 +206,12 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
 
           <div className="px-6 py-5 space-y-5">
 
-            {/* Contact & detail fields */}
+            {/* Contact & detail fields — 2-column grid */}
             {fields.length > 0 && (
-              <div className="border border-border rounded-2xl overflow-hidden divide-y divide-border">
+              <div className="grid grid-cols-2 gap-2">
                 {fields.map(f => (
-                  <div key={f.label} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
-                    <div className="text-muted-foreground flex-shrink-0 w-5 flex justify-center">
-                      {f.icon}
-                    </div>
+                  <div key={f.label} className="flex items-center gap-2.5 px-3 py-2.5 bg-muted/40 rounded-xl border border-border">
+                    <div className="text-muted-foreground flex-shrink-0">{f.icon}</div>
                     <div className="min-w-0 flex-1">
                       <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider leading-none mb-0.5">{f.label}</div>
                       <div className="text-sm font-medium text-foreground truncate">{f.value}</div>
@@ -292,9 +301,23 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
           <textarea value={form.notes} onChange={set('notes')} rows={3} placeholder="Notes about this client..." className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-colors" />
         </div>
 
+        {dupeWarning && (
+          <div className="rounded-lg bg-amber-50 border border-amber-300 px-3 py-2.5 text-sm text-amber-800 space-y-2">
+            <p><span className="font-semibold">Duplicate detected:</span> A client with this mobile number already exists — <span className="font-semibold">{dupeWarning}</span>.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDupeWarning(null)} className="flex-1 py-1.5 rounded-lg border border-amber-300 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors">
+                Cancel
+              </button>
+              <button onClick={() => handleSave(true)} className="flex-1 py-1.5 rounded-lg bg-amber-600 text-xs font-semibold text-white hover:bg-amber-700 transition-colors">
+                Save Anyway
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => client ? setMode('view') : onClose()}>Cancel</Button>
-          <Button onClick={handleSave} loading={saving}>{client ? 'Save Changes' : 'Add Client'}</Button>
+          <Button onClick={() => handleSave()} loading={saving}>{client ? 'Save Changes' : 'Add Client'}</Button>
         </div>
       </div>
     </Modal>

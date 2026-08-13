@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect, useCallback, ReactNode } fr
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/Badge'
-import { Download, Search, ChevronUp, ChevronDown, Sparkles, Trash2, AlertTriangle, X, Columns3 } from 'lucide-react'
+import { Download, Search, ChevronUp, ChevronDown, Sparkles, Trash2, AlertTriangle, X, Columns3, Pencil } from 'lucide-react'
 import type { Lead, Client, Transaction } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
@@ -205,6 +205,167 @@ const SEED_CLIENTS = [
   { name: 'Patricia Chan', email: 'patriciachan@gmail.com', phone: '96600123', property_type: 'HDB', notes: 'Sold Bishan 5-room HDB. Looking to upsize next year.' },
 ]
 
+// ── Bulk Edit Modal ────────────────────────────────────────────────────────────
+
+interface BulkFields {
+  status: string
+  grade: string
+  client_type: string
+  property_type: string
+  follow_up_date: string
+}
+
+function BulkEditModal({
+  tab, count, onClose, onSave, saving,
+}: {
+  tab: Tab
+  count: number
+  onClose: () => void
+  onSave: (fields: Partial<BulkFields>) => void
+  saving: boolean
+}) {
+  const [fields, setFields] = useState<BulkFields>({
+    status: '', grade: '', client_type: '', property_type: '', follow_up_date: '',
+  })
+
+  const set = (k: keyof BulkFields) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setFields(f => ({ ...f, [k]: e.target.value }))
+
+  const leadStatuses = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
+  const txStatuses = ['Active', 'Pending', 'Completed', 'Cancelled']
+  const grades = ['A', 'B', 'C']
+  const clientTypes = ['Hot', 'Warm', 'Cold']
+
+  const handleSave = () => {
+    const payload: Partial<BulkFields> = {}
+    for (const [k, v] of Object.entries(fields)) {
+      if (v !== '') payload[k as keyof BulkFields] = v
+    }
+    if (Object.keys(payload).length === 0) return
+    onSave(payload)
+  }
+
+  const hasValue = Object.values(fields).some(v => v !== '')
+
+  const selectCls = 'w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer'
+  const inputCls = 'w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary'
+  const labelCls = 'block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Pencil size={14} className="text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-sm">Bulk Edit</p>
+              <p className="text-xs text-muted-foreground">{count} record{count !== 1 ? 's' : ''} selected</p>
+            </div>
+          </div>
+          <motion.button
+            onClick={onClose}
+            whileHover={{ rotate: 90 }}
+            transition={{ duration: 0.18, ease: 'easeInOut' }}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+          >
+            <X size={16} />
+          </motion.button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          <p className="text-xs text-muted-foreground">Only filled fields will be applied. Leave blank to keep existing values.</p>
+
+          {tab === 'leads' && (
+            <>
+              <div>
+                <label className={labelCls}>Status</label>
+                <select value={fields.status} onChange={set('status')} className={selectCls}>
+                  <option value="">— keep existing —</option>
+                  {leadStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Grade</label>
+                <select value={fields.grade} onChange={set('grade')} className={selectCls}>
+                  <option value="">— keep existing —</option>
+                  {grades.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Client Type</label>
+                <select value={fields.client_type} onChange={set('client_type')} className={selectCls}>
+                  <option value="">— keep existing —</option>
+                  {clientTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Property Type</label>
+                <input value={fields.property_type} onChange={set('property_type')} placeholder="e.g. Condo, HDB, Industrial" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Follow-up Date</label>
+                <input type="date" value={fields.follow_up_date} onChange={set('follow_up_date')} className={inputCls} />
+              </div>
+            </>
+          )}
+
+          {tab === 'clients' && (
+            <>
+              <div>
+                <label className={labelCls}>Client Type</label>
+                <select value={fields.client_type} onChange={set('client_type')} className={selectCls}>
+                  <option value="">— keep existing —</option>
+                  {clientTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Property Type</label>
+                <input value={fields.property_type} onChange={set('property_type')} placeholder="e.g. Condo, HDB, Industrial" className={inputCls} />
+              </div>
+            </>
+          )}
+
+          {tab === 'transactions' && (
+            <div>
+              <label className={labelCls}>Status</label>
+              <select value={fields.status} onChange={set('status')} className={selectCls}>
+                <option value="">— keep existing —</option>
+                {txStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 px-5 pb-5">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!hasValue || saving}
+            className="flex-1 py-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Saving…' : 'Apply Changes'}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 export default function DatabaseClient({ leads, clients, transactions, userId }: {
   leads: Lead[]; clients: Client[]; transactions: Transaction[]; userId: string
 }) {
@@ -223,10 +384,18 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
   const [resetError, setResetError] = useState<string | null>(null)
   const confirmInputRef = useRef<HTMLInputElement>(null)
 
+  // Bulk selection + edit
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkEditOpen, setBulkEditOpen] = useState(false)
+  const [bulkSaving, setBulkSaving] = useState(false)
+
   // Column visibility — lazy-initialised from localStorage
   const [leadCols, setLeadCols] = useState<Set<string>>(() => loadCols('db-lead-cols', LEAD_COLS))
   const [clientCols, setClientCols] = useState<Set<string>>(() => loadCols('db-client-cols', CLIENT_COLS))
   const [txCols, setTxCols] = useState<Set<string>>(() => loadCols('db-tx-cols', TX_COLS))
+
+  // Reset selection when tab changes
+  useEffect(() => { setSelectedIds(new Set()) }, [tab])
 
   const makeToggle = useCallback(
     (setter: React.Dispatch<React.SetStateAction<Set<string>>>, storageKey: string) =>
@@ -292,6 +461,51 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
     return matchesSearch && (!statusFilter || tx.status === statusFilter)
   }))
 
+  // Selection helpers
+  const currentIds = (tab === 'leads' ? filteredLeads : tab === 'clients' ? filteredClients : filteredTx).map(r => r.id)
+  const allSelected = currentIds.length > 0 && currentIds.every(id => selectedIds.has(id))
+  const someSelected = currentIds.some(id => selectedIds.has(id)) && !allSelected
+
+  const toggleAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allSelected) currentIds.forEach(id => next.delete(id))
+      else currentIds.forEach(id => next.add(id))
+      return next
+    })
+  }
+
+  const toggleRow = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleBulkEdit = async (fields: Partial<BulkFields>) => {
+    setBulkSaving(true)
+    const ids = Array.from(selectedIds)
+    const table = tab === 'leads' ? 'leads' : tab === 'clients' ? 'clients' : 'transactions'
+    const now = new Date().toISOString()
+    await supabase.from(table).update({ ...fields, updated_at: now }).in('id', ids)
+    setBulkSaving(false)
+    setBulkEditOpen(false)
+    setSelectedIds(new Set())
+    startTransition(() => router.refresh())
+  }
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size
+    if (!confirm(`Delete ${count} selected record${count !== 1 ? 's' : ''}? This cannot be undone.`)) return
+    const ids = Array.from(selectedIds)
+    const table = tab === 'leads' ? 'leads' : tab === 'clients' ? 'clients' : 'transactions'
+    await supabase.from(table).delete().in('id', ids)
+    setSelectedIds(new Set())
+    startTransition(() => router.refresh())
+  }
+
   const tabs: { id: Tab; label: string; count: number }[] = [
     { id: 'leads', label: 'Leads', count: leads.length },
     { id: 'clients', label: 'Clients', count: clients.length },
@@ -342,6 +556,10 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
     : ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
 
   const thCls = 'text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 py-3 cursor-pointer hover:text-foreground transition-colors select-none whitespace-nowrap'
+  const checkThCls = 'px-4 py-3 w-10'
+  const checkTdCls = 'px-4 py-3 w-10'
+
+  const selectedCount = selectedIds.size
 
   return (
     <div className="p-6">
@@ -435,6 +653,15 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
             <table className="w-full">
               <thead style={{ background: 'hsl(var(--muted))' }}>
                 <tr>
+                  <th className={checkThCls}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={el => { if (el) el.indeterminate = someSelected }}
+                      onChange={toggleAll}
+                      className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                    />
+                  </th>
                   {LEAD_COLS.filter(c => leadCols.has(c.key)).map(col => (
                     <th key={col.key} onClick={() => handleSort(col.key)} className={thCls}>
                       <span className="flex items-center gap-1">{col.label}<SortIcon active={sortKey === col.key} dir={sortDir} /></span>
@@ -444,14 +671,29 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredLeads.map((l, i) => (
-                  <motion.tr key={l.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="hover:bg-muted/30 transition-colors">
+                  <motion.tr
+                    key={l.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.02 }}
+                    className={cn('transition-colors cursor-pointer', selectedIds.has(l.id) ? 'bg-primary/5' : 'hover:bg-muted/30')}
+                    onClick={() => toggleRow(l.id)}
+                  >
+                    <td className={checkTdCls} onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(l.id)}
+                        onChange={() => toggleRow(l.id)}
+                        className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                      />
+                    </td>
                     {LEAD_COLS.filter(c => leadCols.has(c.key)).map(col => (
                       <td key={col.key} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{col.render(l)}</td>
                     ))}
                   </motion.tr>
                 ))}
                 {filteredLeads.length === 0 && (
-                  <tr><td colSpan={leadCols.size || 1} className="px-4 py-10 text-center text-sm text-muted-foreground">No leads match your search</td></tr>
+                  <tr><td colSpan={leadCols.size + 1} className="px-4 py-10 text-center text-sm text-muted-foreground">No leads match your search</td></tr>
                 )}
               </tbody>
             </table>
@@ -461,6 +703,15 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
             <table className="w-full">
               <thead style={{ background: 'hsl(var(--muted))' }}>
                 <tr>
+                  <th className={checkThCls}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={el => { if (el) el.indeterminate = someSelected }}
+                      onChange={toggleAll}
+                      className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                    />
+                  </th>
                   {CLIENT_COLS.filter(c => clientCols.has(c.key)).map(col => (
                     <th key={col.key} onClick={() => handleSort(col.key)} className={thCls}>
                       <span className="flex items-center gap-1">{col.label}<SortIcon active={sortKey === col.key} dir={sortDir} /></span>
@@ -470,14 +721,29 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredClients.map((c, i) => (
-                  <motion.tr key={c.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="hover:bg-muted/30 transition-colors">
+                  <motion.tr
+                    key={c.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.02 }}
+                    className={cn('transition-colors cursor-pointer', selectedIds.has(c.id) ? 'bg-primary/5' : 'hover:bg-muted/30')}
+                    onClick={() => toggleRow(c.id)}
+                  >
+                    <td className={checkTdCls} onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(c.id)}
+                        onChange={() => toggleRow(c.id)}
+                        className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                      />
+                    </td>
                     {CLIENT_COLS.filter(col => clientCols.has(col.key)).map(col => (
                       <td key={col.key} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{col.render(c)}</td>
                     ))}
                   </motion.tr>
                 ))}
                 {filteredClients.length === 0 && (
-                  <tr><td colSpan={clientCols.size} className="px-4 py-10 text-center text-sm text-muted-foreground">No clients match your search</td></tr>
+                  <tr><td colSpan={clientCols.size + 1} className="px-4 py-10 text-center text-sm text-muted-foreground">No clients match your search</td></tr>
                 )}
               </tbody>
             </table>
@@ -487,6 +753,15 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
             <table className="w-full">
               <thead style={{ background: 'hsl(var(--muted))' }}>
                 <tr>
+                  <th className={checkThCls}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={el => { if (el) el.indeterminate = someSelected }}
+                      onChange={toggleAll}
+                      className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                    />
+                  </th>
                   {TX_COLS.filter(c => txCols.has(c.key)).map(col => (
                     <th key={col.key} onClick={() => handleSort(col.key)} className={thCls}>
                       <span className="flex items-center gap-1">{col.label}<SortIcon active={sortKey === col.key} dir={sortDir} /></span>
@@ -496,14 +771,29 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredTx.map((tx, i) => (
-                  <motion.tr key={tx.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="hover:bg-muted/30 transition-colors">
+                  <motion.tr
+                    key={tx.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.02 }}
+                    className={cn('transition-colors cursor-pointer', selectedIds.has(tx.id) ? 'bg-primary/5' : 'hover:bg-muted/30')}
+                    onClick={() => toggleRow(tx.id)}
+                  >
+                    <td className={checkTdCls} onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(tx.id)}
+                        onChange={() => toggleRow(tx.id)}
+                        className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                      />
+                    </td>
                     {TX_COLS.filter(c => txCols.has(c.key)).map(col => (
                       <td key={col.key} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{col.render(tx)}</td>
                     ))}
                   </motion.tr>
                 ))}
                 {filteredTx.length === 0 && (
-                  <tr><td colSpan={txCols.size} className="px-4 py-10 text-center text-sm text-muted-foreground">No transactions match your search</td></tr>
+                  <tr><td colSpan={txCols.size + 1} className="px-4 py-10 text-center text-sm text-muted-foreground">No transactions match your search</td></tr>
                 )}
               </tbody>
             </table>
@@ -517,6 +807,55 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
           </p>
         </div>
       </div>
+
+      {/* Bulk action toolbar */}
+      <AnimatePresence>
+        {selectedCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 bg-foreground text-background rounded-2xl shadow-2xl border border-foreground/10"
+          >
+            <span className="text-sm font-semibold tabular-nums whitespace-nowrap">
+              {selectedCount} selected
+            </span>
+            <div className="w-px h-4 bg-background/20" />
+            <button
+              onClick={() => setBulkEditOpen(true)}
+              className="flex items-center gap-1.5 text-sm font-medium hover:opacity-70 transition-opacity"
+            >
+              <Pencil size={13} /> Edit
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 text-sm font-medium text-red-400 hover:text-red-300 transition-colors"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="ml-1 text-background/50 hover:text-background transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk edit modal */}
+      <AnimatePresence>
+        {bulkEditOpen && (
+          <BulkEditModal
+            tab={tab}
+            count={selectedCount}
+            onClose={() => setBulkEditOpen(false)}
+            onSave={handleBulkEdit}
+            saving={bulkSaving}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Reset confirmation modal */}
       <AnimatePresence>
