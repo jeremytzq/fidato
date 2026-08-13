@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Plus, Phone, MessageCircle, Mail, Pencil, Trash2, Search, FileSpreadsheet, ExternalLink, Building2, Banknote, MapPin, Cake, Home, Tag, Calendar } from 'lucide-react'
 import type { Client, PropertyType, ClientType } from '@/types'
 import { formatDate, toTitleCase, formatCurrency } from '@/utils/format'
-import { pushClientsToGoogleSheets, pullClientsFromGoogleSheets } from '@/lib/googleSheets'
+import { pushClientsToGoogleSheets } from '@/lib/googleSheets'
 import { cn } from '@/utils/cn'
 
 const PROPERTY_TYPES: PropertyType[] = ['Commercial', 'Condo', 'EC', 'HDB', 'Industrial', 'Landed', 'Other']
@@ -311,22 +311,13 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
   const [syncing, setSyncing] = useState(false)
   const [sheetUrl, setSheetUrl] = useState<string | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
-  const [syncResult, setSyncResult] = useState<{ updated: number; created: number } | null>(null)
 
   const handleSaved = () => startTransition(() => router.refresh())
 
   const handleSync = async () => {
     setSyncing(true)
     setSyncError(null)
-    setSyncResult(null)
     try {
-      let pullResult: { updated: number; created: number } = { updated: 0, created: 0 }
-      try {
-        pullResult = await pullClientsFromGoogleSheets(userId)
-      } catch (e: any) {
-        if (!e.message?.includes('No sheet found')) throw e
-      }
-
       const { data: freshClients } = await supabase
         .from('clients')
         .select('*')
@@ -334,10 +325,7 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
         .order('created_at', { ascending: false })
 
       const url = await pushClientsToGoogleSheets((freshClients ?? initialClients) as Client[])
-
       setSheetUrl(url)
-      setSyncResult(pullResult)
-      startTransition(() => router.refresh())
     } catch (e: any) {
       setSyncError(e.message)
     } finally {
@@ -381,17 +369,7 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
 
       {sheetUrl && (
         <div className="flex items-center justify-between gap-3 mb-4 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
-          <span className="font-medium">
-            Synced
-            {syncResult && (syncResult.updated > 0 || syncResult.created > 0) && (
-              <span className="font-normal text-green-600 ml-1.5">
-                — {[
-                  syncResult.updated > 0 && `${syncResult.updated} updated`,
-                  syncResult.created > 0 && `${syncResult.created} added`,
-                ].filter(Boolean).join(', ')} from Sheets
-              </span>
-            )}
-          </span>
+          <span className="font-medium">Exported to Google Sheets</span>
           <a href={sheetUrl} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1 font-semibold hover:underline flex-shrink-0">
             Open <ExternalLink size={12} />

@@ -12,7 +12,7 @@ import type { Lead, LeadStatus, LeadGrade, ClientType, PropertyType } from '@/ty
 import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
-import { pushLeadsToGoogleSheets, pullLeadsFromGoogleSheets } from '@/lib/googleSheets'
+import { pushLeadsToGoogleSheets } from '@/lib/googleSheets'
 import { createClient } from '@/lib/supabase/client'
 
 const STATUSES: { id: LeadStatus; label: string; color: string }[] = [
@@ -196,7 +196,6 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [syncing, setSyncing] = useState(false)
   const [sheetUrl, setSheetUrl] = useState<string | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
-  const [syncResult, setSyncResult] = useState<{ updated: number; created: number } | null>(null)
 
   // Search & filter state
   const [search, setSearch] = useState('')
@@ -246,15 +245,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const handleSync = async () => {
     setSyncing(true)
     setSyncError(null)
-    setSyncResult(null)
     try {
-      let pullResult: { updated: number; created: number } = { updated: 0, created: 0 }
-      try {
-        pullResult = await pullLeadsFromGoogleSheets(userId)
-      } catch (e: unknown) {
-        if (!(e instanceof Error) || !e.message?.includes('No sheet found')) throw e
-      }
-
       const supabase = createClient()
       const { data: freshLeads } = await supabase
         .from('leads')
@@ -263,10 +254,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
         .order('created_at', { ascending: false })
 
       const url = await pushLeadsToGoogleSheets((freshLeads ?? initialLeads) as Lead[])
-
       setSheetUrl(url)
-      setSyncResult(pullResult)
-      startTransition(() => router.refresh())
     } catch (e: unknown) {
       setSyncError(e instanceof Error ? e.message : 'Sync failed')
     } finally {
@@ -383,17 +371,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
 
       {sheetUrl && (
         <div className="flex items-center justify-between gap-3 mb-3 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
-          <span className="font-medium">
-            Synced
-            {syncResult && (syncResult.updated > 0 || syncResult.created > 0) && (
-              <span className="font-normal text-green-600 ml-1.5">
-                — {[
-                  syncResult.updated > 0 && `${syncResult.updated} updated`,
-                  syncResult.created > 0 && `${syncResult.created} added`,
-                ].filter(Boolean).join(', ')} from Sheets
-              </span>
-            )}
-          </span>
+          <span className="font-medium">Exported to Google Sheets</span>
           <a href={sheetUrl} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1 font-semibold hover:underline flex-shrink-0">
             Open <ExternalLink size={12} />
