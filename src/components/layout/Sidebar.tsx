@@ -16,6 +16,7 @@ import {
   Building2,
   BookOpen,
   Settings,
+  UserPlus,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -26,6 +27,7 @@ const navItems = [
   { href: '/transactions', label: 'Transactions', icon: FileText },
   { href: '/pnl', label: 'Profit & Loss', icon: TrendingUp },
   { href: '/content-hub', label: 'Content Hub', icon: BookOpen },
+  { href: '/recruitment', label: 'Recruitment', icon: UserPlus },
   { href: '/database', label: 'Database', icon: Database },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]

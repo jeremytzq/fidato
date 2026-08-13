@@ -1,4 +1,5 @@
 export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Negotiating' | 'Won' | 'Lost'
+export type RecruitStatus = 'New' | 'Contacted' | 'Interested' | 'Scheduled' | 'Joined' | 'Not Interested'
 export type LeadGrade = 'A' | 'B' | 'C'
 export type ClientType = 'Hot' | 'Warm' | 'Cold'
 export type LeadSource = 'Cold Call' | 'Doorknock' | 'Flyers / Mailers' | 'Google PPC' | 'Meta Ads' | 'Referral' | 'Roadshow' | 'Walk-in' | 'Website' | 'Other'
@@ -29,6 +30,20 @@ export interface Lead {
   notes: string | null
   follow_up_date: string | null
   reminder_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RecruitLead {
+  id: string
+  user_id: string
+  name: string
+  phone: string | null
+  email: string | null
+  current_agency: string | null
+  status: RecruitStatus
+  notes: string | null
+  follow_up_date: string | null
   created_at: string
   updated_at: string
 }
