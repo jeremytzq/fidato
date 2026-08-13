@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/Badge'
 import { Download, Search, ChevronUp, ChevronDown, Sparkles, Trash2, AlertTriangle, X, Columns3, Pencil } from 'lucide-react'
-import type { Lead, Client, Transaction } from '@/types'
+import type { Lead, Client, Transaction, RecruitLead } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
 import { clearGoogleSheets } from '@/lib/googleSheets'
 import { cn } from '@/utils/cn'
 
-type Tab = 'leads' | 'clients' | 'transactions'
+type Tab = 'leads' | 'clients' | 'transactions' | 'recruits'
 type SortDir = 'asc' | 'desc'
 
 interface ColDef<T> {
@@ -72,6 +72,17 @@ const TX_COLS: ColDef<Transaction>[] = [
   { key: 'status', label: 'Status', defaultVisible: true, render: t => <Badge label={t.status} /> },
   { key: 'closing_date', label: 'Closing Date', defaultVisible: true, render: t => t.closing_date ? formatDate(t.closing_date) : '—' },
   { key: 'notes', label: 'Notes', defaultVisible: false, render: t => <span className="max-w-40 truncate block">{t.notes || '—'}</span> },
+]
+
+const RECRUIT_COLS: ColDef<RecruitLead>[] = [
+  { key: 'name', label: 'Name', defaultVisible: true, render: r => <span className="font-medium text-foreground">{r.name}</span> },
+  { key: 'phone', label: 'Phone', defaultVisible: true, render: r => r.phone || '—' },
+  { key: 'email', label: 'Email', defaultVisible: true, render: r => r.email || '—' },
+  { key: 'current_agency', label: 'Agency', defaultVisible: true, render: r => r.current_agency || '—' },
+  { key: 'status', label: 'Status', defaultVisible: true, render: r => <Badge label={r.status} /> },
+  { key: 'follow_up_date', label: 'Follow-up', defaultVisible: true, render: r => r.follow_up_date ? formatDate(r.follow_up_date) : '—' },
+  { key: 'notes', label: 'Notes', defaultVisible: false, render: r => <span className="max-w-48 truncate block">{r.notes || '—'}</span> },
+  { key: 'created_at', label: 'Created', defaultVisible: false, render: r => formatDate(r.created_at) },
 ]
 
 function loadCols(key: string, defs: ColDef<any>[]): Set<string> {
@@ -347,6 +358,22 @@ function BulkEditModal({
               </select>
             </div>
           )}
+
+          {tab === 'recruits' && (
+            <>
+              <div>
+                <label className={labelCls}>Status</label>
+                <select value={fields.status} onChange={set('status')} className={selectCls}>
+                  <option value="">— keep existing —</option>
+                  {['New', 'Contacted', 'Interested', 'Scheduled', 'Joined', 'Not Interested'].map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Follow-up Date</label>
+                <input type="date" value={fields.follow_up_date} onChange={set('follow_up_date')} className={inputCls} />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex gap-2 px-5 pb-5">
@@ -366,8 +393,8 @@ function BulkEditModal({
   )
 }
 
-export default function DatabaseClient({ leads, clients, transactions, userId }: {
-  leads: Lead[]; clients: Client[]; transactions: Transaction[]; userId: string
+export default function DatabaseClient({ leads, clients, transactions, recruits, userId }: {
+  leads: Lead[]; clients: Client[]; transactions: Transaction[]; recruits: RecruitLead[]; userId: string
 }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -393,6 +420,7 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
   const [leadCols, setLeadCols] = useState<Set<string>>(() => loadCols('db-lead-cols', LEAD_COLS))
   const [clientCols, setClientCols] = useState<Set<string>>(() => loadCols('db-client-cols', CLIENT_COLS))
   const [txCols, setTxCols] = useState<Set<string>>(() => loadCols('db-tx-cols', TX_COLS))
+  const [recruitCols, setRecruitCols] = useState<Set<string>>(() => loadCols('db-recruit-cols', RECRUIT_COLS))
 
   // Reset selection when tab changes
   useEffect(() => { setSelectedIds(new Set()) }, [tab])
@@ -424,9 +452,11 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
   const toggleLeadCol = makeToggle(setLeadCols, 'db-lead-cols')
   const toggleClientCol = makeToggle(setClientCols, 'db-client-cols')
   const toggleTxCol = makeToggle(setTxCols, 'db-tx-cols')
+  const toggleRecruitCol = makeToggle(setRecruitCols, 'db-recruit-cols')
   const resetLeadCols = makeReset(setLeadCols, LEAD_COLS, 'db-lead-cols')
   const resetClientCols = makeReset(setClientCols, CLIENT_COLS, 'db-client-cols')
   const resetTxCols = makeReset(setTxCols, TX_COLS, 'db-tx-cols')
+  const resetRecruitCols = makeReset(setRecruitCols, RECRUIT_COLS, 'db-recruit-cols')
 
   const handleSort = (key: string) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -461,8 +491,13 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
     return matchesSearch && (!statusFilter || tx.status === statusFilter)
   }))
 
+  const filteredRecruits = sortData(recruits.filter(r => {
+    const matchesSearch = !search || [r.name, r.email, r.phone, r.current_agency, r.notes].some(v => v?.toLowerCase().includes(q))
+    return matchesSearch && (!statusFilter || r.status === statusFilter)
+  }))
+
   // Selection helpers
-  const currentIds = (tab === 'leads' ? filteredLeads : tab === 'clients' ? filteredClients : filteredTx).map(r => r.id)
+  const currentIds = (tab === 'leads' ? filteredLeads : tab === 'clients' ? filteredClients : tab === 'transactions' ? filteredTx : filteredRecruits).map(r => r.id)
   const allSelected = currentIds.length > 0 && currentIds.every(id => selectedIds.has(id))
   const someSelected = currentIds.some(id => selectedIds.has(id)) && !allSelected
 
@@ -487,7 +522,7 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
   const handleBulkEdit = async (fields: Partial<BulkFields>) => {
     setBulkSaving(true)
     const ids = Array.from(selectedIds)
-    const table = tab === 'leads' ? 'leads' : tab === 'clients' ? 'clients' : 'transactions'
+    const table = tab === 'leads' ? 'leads' : tab === 'clients' ? 'clients' : tab === 'transactions' ? 'transactions' : 'recruitment_leads'
     const now = new Date().toISOString()
     await supabase.from(table).update({ ...fields, updated_at: now }).in('id', ids)
     setBulkSaving(false)
@@ -500,8 +535,32 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
     const count = selectedIds.size
     if (!confirm(`Delete ${count} selected record${count !== 1 ? 's' : ''}? This cannot be undone.`)) return
     const ids = Array.from(selectedIds)
-    const table = tab === 'leads' ? 'leads' : tab === 'clients' ? 'clients' : 'transactions'
+    const table = tab === 'leads' ? 'leads' : tab === 'clients' ? 'clients' : tab === 'transactions' ? 'transactions' : 'recruitment_leads'
     await supabase.from(table).delete().in('id', ids)
+    setSelectedIds(new Set())
+    startTransition(() => router.refresh())
+  }
+
+  const handleMoveToRecruitment = async () => {
+    const ids = Array.from(selectedIds)
+    const toMove = leads.filter(l => ids.includes(l.id))
+    if (!confirm(`Move ${toMove.length} lead${toMove.length !== 1 ? 's' : ''} to Recruitment? They will be removed from Leads.`)) return
+    const now = new Date().toISOString()
+    await supabase.from('recruitment_leads').insert(
+      toMove.map(l => ({
+        user_id: userId,
+        name: l.name,
+        phone: l.phone,
+        email: l.email,
+        current_agency: null,
+        status: 'New',
+        notes: l.notes,
+        follow_up_date: l.follow_up_date,
+        created_at: now,
+        updated_at: now,
+      }))
+    )
+    await supabase.from('leads').delete().in('id', ids)
     setSelectedIds(new Set())
     startTransition(() => router.refresh())
   }
@@ -510,12 +569,14 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
     { id: 'leads', label: 'Leads', count: leads.length },
     { id: 'clients', label: 'Clients', count: clients.length },
     { id: 'transactions', label: 'Transactions', count: transactions.length },
+    { id: 'recruits', label: 'Recruits', count: recruits.length },
   ]
 
   const exportData = () => {
     if (tab === 'leads') exportCSV(filteredLeads, 'leads.csv')
     else if (tab === 'clients') exportCSV(filteredClients, 'clients.csv')
-    else exportCSV(filteredTx, 'transactions.csv')
+    else if (tab === 'transactions') exportCSV(filteredTx, 'transactions.csv')
+    else exportCSV(filteredRecruits, 'recruits.csv')
   }
 
   const handleSeedData = async () => {
@@ -553,6 +614,8 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
 
   const statuses = tab === 'transactions'
     ? ['Active', 'Pending', 'Completed', 'Cancelled']
+    : tab === 'recruits'
+    ? ['New', 'Contacted', 'Interested', 'Scheduled', 'Joined', 'Not Interested']
     : ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
 
   const thCls = 'text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-4 py-3 cursor-pointer hover:text-foreground transition-colors select-none whitespace-nowrap'
@@ -643,6 +706,9 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
         )}
         {tab === 'transactions' && (
           <ColPicker cols={TX_COLS} visible={txCols} onToggle={toggleTxCol} onReset={resetTxCols} storageKey="db-tx-cols" />
+        )}
+        {tab === 'recruits' && (
+          <ColPicker cols={RECRUIT_COLS} visible={recruitCols} onToggle={toggleRecruitCol} onReset={resetRecruitCols} storageKey="db-recruit-cols" />
         )}
       </div>
 
@@ -798,12 +864,62 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
               </tbody>
             </table>
           )}
+
+          {tab === 'recruits' && (
+            <table className="w-full">
+              <thead style={{ background: 'hsl(var(--muted))' }}>
+                <tr>
+                  <th className={checkThCls}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={el => { if (el) el.indeterminate = someSelected }}
+                      onChange={toggleAll}
+                      className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                    />
+                  </th>
+                  {RECRUIT_COLS.filter(c => recruitCols.has(c.key)).map(col => (
+                    <th key={col.key} onClick={() => handleSort(col.key)} className={thCls}>
+                      <span className="flex items-center gap-1">{col.label}<SortIcon active={sortKey === col.key} dir={sortDir} /></span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredRecruits.map((r, i) => (
+                  <motion.tr
+                    key={r.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.02 }}
+                    className={cn('transition-colors cursor-pointer', selectedIds.has(r.id) ? 'bg-primary/5' : 'hover:bg-muted/30')}
+                    onClick={() => toggleRow(r.id)}
+                  >
+                    <td className={checkTdCls} onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(r.id)}
+                        onChange={() => toggleRow(r.id)}
+                        className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                      />
+                    </td>
+                    {RECRUIT_COLS.filter(c => recruitCols.has(c.key)).map(col => (
+                      <td key={col.key} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{col.render(r)}</td>
+                    ))}
+                  </motion.tr>
+                ))}
+                {filteredRecruits.length === 0 && (
+                  <tr><td colSpan={recruitCols.size + 1} className="px-4 py-10 text-center text-sm text-muted-foreground">No recruits match your search</td></tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
         <div className="px-4 py-3 border-t border-border bg-muted/30">
           <p className="text-xs text-muted-foreground">
-            {tab === 'leads' ? filteredLeads.length : tab === 'clients' ? filteredClients.length : filteredTx.length} of{' '}
-            {tab === 'leads' ? leads.length : tab === 'clients' ? clients.length : transactions.length} records
+            {tab === 'leads' ? filteredLeads.length : tab === 'clients' ? filteredClients.length : tab === 'transactions' ? filteredTx.length : filteredRecruits.length} of{' '}
+            {tab === 'leads' ? leads.length : tab === 'clients' ? clients.length : tab === 'transactions' ? transactions.length : recruits.length} records
           </p>
         </div>
       </div>
@@ -828,6 +944,17 @@ export default function DatabaseClient({ leads, clients, transactions, userId }:
             >
               <Pencil size={13} /> Edit
             </button>
+            {tab === 'leads' && (
+              <>
+                <div className="w-px h-4 bg-background/20" />
+                <button
+                  onClick={handleMoveToRecruitment}
+                  className="flex items-center gap-1.5 text-sm font-medium text-purple-300 hover:text-purple-200 transition-colors"
+                >
+                  Move to Recruitment
+                </button>
+              </>
+            )}
             <button
               onClick={handleBulkDelete}
               className="flex items-center gap-1.5 text-sm font-medium text-red-400 hover:text-red-300 transition-colors"
