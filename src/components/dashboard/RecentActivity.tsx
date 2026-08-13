@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import type { Lead } from '@/types'
-import { formatDate } from '@/utils/format'
+import { formatDate, toTitleCase } from '@/utils/format'
 
 export function RecentLeads({ leads }: { leads: Lead[] }) {
   return (
@@ -29,7 +29,7 @@ export function RecentLeads({ leads }: { leads: Lead[] }) {
               {lead.name[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{lead.name}</p>
+              <p className="text-sm font-medium text-foreground truncate">{toTitleCase(lead.name)}</p>
               <p className="text-xs text-muted-foreground">
                 {lead.property_type || 'Property'} · {lead.budget ? `$${(lead.budget / 1000).toFixed(0)}k` : 'Budget TBD'}
               </p>
