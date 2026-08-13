@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect, useCallback, ReactNode } fr
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/Badge'
-import { Download, Search, ChevronUp, ChevronDown, Sparkles, Trash2, AlertTriangle, X, Columns3, Pencil } from 'lucide-react'
+import { Download, Search, ChevronUp, ChevronDown, Sparkles, Trash2, AlertTriangle, X, Columns3, Pencil, GripVertical } from 'lucide-react'
 import type { Lead, Client, Transaction, RecruitLead } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
@@ -97,6 +97,24 @@ function saveCols(key: string, cols: Set<string>) {
   try { localStorage.setItem(key, JSON.stringify(Array.from(cols))) } catch { /* ignore */ }
 }
 
+function loadColOrder(key: string, defs: ColDef<any>[]): string[] {
+  try {
+    const stored = localStorage.getItem(key)
+    if (stored) {
+      const parsed = JSON.parse(stored) as string[]
+      const defKeys = defs.map(d => d.key)
+      const valid = parsed.filter(k => defKeys.includes(k))
+      const missing = defKeys.filter(k => !valid.includes(k))
+      return [...valid, ...missing]
+    }
+  } catch { /* ignore */ }
+  return defs.map(d => d.key)
+}
+
+function saveColOrder(key: string, order: string[]) {
+  try { localStorage.setItem(key, JSON.stringify(order)) } catch { /* ignore */ }
+}
+
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   return active
     ? (dir === 'asc' ? <ChevronUp size={13} className="text-primary" /> : <ChevronDown size={13} className="text-primary" />)
@@ -104,16 +122,20 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 }
 
 function ColPicker<T>({
-  cols, visible, onToggle, onReset, storageKey,
+  cols, visible, onToggle, onReset, storageKey, order, onReorder,
 }: {
   cols: ColDef<T>[]
   visible: Set<string>
   onToggle: (key: string) => void
   onReset: () => void
   storageKey: string
+  order: string[]
+  onReorder: (newOrder: string[]) => void
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const dragKeyRef = useRef<string | null>(null)
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -124,7 +146,35 @@ function ColPicker<T>({
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
+  const orderedCols = order.map(k => cols.find(c => c.key === k)).filter(Boolean) as ColDef<T>[]
   const hiddenCount = cols.filter(c => !visible.has(c.key)).length
+
+  const handleDragStart = (e: React.DragEvent, key: string) => {
+    dragKeyRef.current = key
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  const handleDragOver = (e: React.DragEvent, key: string) => {
+    e.preventDefault()
+    if (dragKeyRef.current !== key) setDragOverKey(key)
+  }
+  const handleDrop = (e: React.DragEvent, targetKey: string) => {
+    e.preventDefault()
+    const from = dragKeyRef.current
+    if (!from || from === targetKey) return
+    const newOrder = [...order]
+    const fromIdx = newOrder.indexOf(from)
+    const toIdx = newOrder.indexOf(targetKey)
+    if (fromIdx === -1 || toIdx === -1) return
+    newOrder.splice(fromIdx, 1)
+    newOrder.splice(toIdx, 0, from)
+    onReorder(newOrder)
+    dragKeyRef.current = null
+    setDragOverKey(null)
+  }
+  const handleDragEnd = () => {
+    dragKeyRef.current = null
+    setDragOverKey(null)
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -153,31 +203,46 @@ function ColPicker<T>({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.97 }}
             transition={{ duration: 0.12 }}
-            className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg w-52 py-1 overflow-hidden"
+            className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg w-56 py-1 overflow-hidden"
           >
             <div className="px-3 py-2 border-b border-border flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Show columns</span>
               <button
-                onClick={() => { onReset(); saveCols(storageKey, new Set(cols.filter(c => c.defaultVisible).map(c => c.key))) }}
+                onClick={() => {
+                  onReset()
+                  onReorder(cols.map(c => c.key))
+                }}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Reset
               </button>
             </div>
+            <p className="px-3 pt-2 pb-0.5 text-[10px] text-muted-foreground/60">Drag to reorder</p>
             <div className="max-h-64 overflow-y-auto py-1">
-              {cols.map(col => (
-                <label
+              {orderedCols.map(col => (
+                <div
                   key={col.key}
-                  className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-muted/50 cursor-pointer group transition-colors"
+                  draggable
+                  onDragStart={e => handleDragStart(e, col.key)}
+                  onDragOver={e => handleDragOver(e, col.key)}
+                  onDrop={e => handleDrop(e, col.key)}
+                  onDragEnd={handleDragEnd}
+                  className={cn(
+                    'flex items-center gap-2 px-2 py-1.5 transition-colors select-none',
+                    dragOverKey === col.key ? 'bg-primary/10 border-t-2 border-primary' : 'hover:bg-muted/50'
+                  )}
                 >
-                  <input
-                    type="checkbox"
-                    checked={visible.has(col.key)}
-                    onChange={() => onToggle(col.key)}
-                    className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
-                  />
-                  <span className="text-sm text-foreground">{col.label}</span>
-                </label>
+                  <GripVertical size={13} className="text-muted-foreground/30 cursor-grab flex-shrink-0" />
+                  <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={visible.has(col.key)}
+                      onChange={() => onToggle(col.key)}
+                      className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                    />
+                    <span className="text-sm text-foreground">{col.label}</span>
+                  </label>
+                </div>
               ))}
             </div>
           </motion.div>
@@ -422,6 +487,12 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
   const [txCols, setTxCols] = useState<Set<string>>(() => loadCols('db-tx-cols', TX_COLS))
   const [recruitCols, setRecruitCols] = useState<Set<string>>(() => loadCols('db-recruit-cols', RECRUIT_COLS))
 
+  // Column order — lazy-initialised from localStorage
+  const [leadColOrder, setLeadColOrder] = useState<string[]>(() => loadColOrder('db-lead-col-order', LEAD_COLS))
+  const [clientColOrder, setClientColOrder] = useState<string[]>(() => loadColOrder('db-client-col-order', CLIENT_COLS))
+  const [txColOrder, setTxColOrder] = useState<string[]>(() => loadColOrder('db-tx-col-order', TX_COLS))
+  const [recruitColOrder, setRecruitColOrder] = useState<string[]>(() => loadColOrder('db-recruit-col-order', RECRUIT_COLS))
+
   // Reset selection when tab changes
   useEffect(() => { setSelectedIds(new Set()) }, [tab])
 
@@ -449,6 +520,15 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
     []
   )
 
+  const makeReorder = useCallback(
+    (setter: React.Dispatch<React.SetStateAction<string[]>>, storageKey: string) =>
+      (newOrder: string[]) => {
+        setter(newOrder)
+        saveColOrder(storageKey, newOrder)
+      },
+    []
+  )
+
   const toggleLeadCol = makeToggle(setLeadCols, 'db-lead-cols')
   const toggleClientCol = makeToggle(setClientCols, 'db-client-cols')
   const toggleTxCol = makeToggle(setTxCols, 'db-tx-cols')
@@ -457,6 +537,16 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
   const resetClientCols = makeReset(setClientCols, CLIENT_COLS, 'db-client-cols')
   const resetTxCols = makeReset(setTxCols, TX_COLS, 'db-tx-cols')
   const resetRecruitCols = makeReset(setRecruitCols, RECRUIT_COLS, 'db-recruit-cols')
+  const reorderLeadCols = makeReorder(setLeadColOrder, 'db-lead-col-order')
+  const reorderClientCols = makeReorder(setClientColOrder, 'db-client-col-order')
+  const reorderTxCols = makeReorder(setTxColOrder, 'db-tx-col-order')
+  const reorderRecruitCols = makeReorder(setRecruitColOrder, 'db-recruit-col-order')
+
+  // Ordered visible cols for table rendering
+  const orderedLeadCols = leadColOrder.map(k => LEAD_COLS.find(c => c.key === k)).filter((c): c is ColDef<Lead> => !!c && leadCols.has(c.key))
+  const orderedClientCols = clientColOrder.map(k => CLIENT_COLS.find(c => c.key === k)).filter((c): c is ColDef<Client> => !!c && clientCols.has(c.key))
+  const orderedTxCols = txColOrder.map(k => TX_COLS.find(c => c.key === k)).filter((c): c is ColDef<Transaction> => !!c && txCols.has(c.key))
+  const orderedRecruitCols = recruitColOrder.map(k => RECRUIT_COLS.find(c => c.key === k)).filter((c): c is ColDef<RecruitLead> => !!c && recruitCols.has(c.key))
 
   const handleSort = (key: string) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -703,16 +793,16 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
 
         {/* Column picker */}
         {tab === 'leads' && (
-          <ColPicker cols={LEAD_COLS} visible={leadCols} onToggle={toggleLeadCol} onReset={resetLeadCols} storageKey="db-lead-cols" />
+          <ColPicker cols={LEAD_COLS} visible={leadCols} onToggle={toggleLeadCol} onReset={resetLeadCols} storageKey="db-lead-cols" order={leadColOrder} onReorder={reorderLeadCols} />
         )}
         {tab === 'clients' && (
-          <ColPicker cols={CLIENT_COLS} visible={clientCols} onToggle={toggleClientCol} onReset={resetClientCols} storageKey="db-client-cols" />
+          <ColPicker cols={CLIENT_COLS} visible={clientCols} onToggle={toggleClientCol} onReset={resetClientCols} storageKey="db-client-cols" order={clientColOrder} onReorder={reorderClientCols} />
         )}
         {tab === 'transactions' && (
-          <ColPicker cols={TX_COLS} visible={txCols} onToggle={toggleTxCol} onReset={resetTxCols} storageKey="db-tx-cols" />
+          <ColPicker cols={TX_COLS} visible={txCols} onToggle={toggleTxCol} onReset={resetTxCols} storageKey="db-tx-cols" order={txColOrder} onReorder={reorderTxCols} />
         )}
         {tab === 'recruits' && (
-          <ColPicker cols={RECRUIT_COLS} visible={recruitCols} onToggle={toggleRecruitCol} onReset={resetRecruitCols} storageKey="db-recruit-cols" />
+          <ColPicker cols={RECRUIT_COLS} visible={recruitCols} onToggle={toggleRecruitCol} onReset={resetRecruitCols} storageKey="db-recruit-cols" order={recruitColOrder} onReorder={reorderRecruitCols} />
         )}
       </div>
 
@@ -732,7 +822,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
                       className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                     />
                   </th>
-                  {LEAD_COLS.filter(c => leadCols.has(c.key)).map(col => (
+                  {orderedLeadCols.map(col => (
                     <th key={col.key} onClick={() => handleSort(col.key)} className={thCls}>
                       <span className="flex items-center gap-1">{col.label}<SortIcon active={sortKey === col.key} dir={sortDir} /></span>
                     </th>
@@ -757,7 +847,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
                         className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                       />
                     </td>
-                    {LEAD_COLS.filter(c => leadCols.has(c.key)).map(col => (
+                    {orderedLeadCols.map(col => (
                       <td key={col.key} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{col.render(l)}</td>
                     ))}
                   </motion.tr>
@@ -782,7 +872,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
                       className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                     />
                   </th>
-                  {CLIENT_COLS.filter(c => clientCols.has(c.key)).map(col => (
+                  {orderedClientCols.map(col => (
                     <th key={col.key} onClick={() => handleSort(col.key)} className={thCls}>
                       <span className="flex items-center gap-1">{col.label}<SortIcon active={sortKey === col.key} dir={sortDir} /></span>
                     </th>
@@ -807,7 +897,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
                         className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                       />
                     </td>
-                    {CLIENT_COLS.filter(col => clientCols.has(col.key)).map(col => (
+                    {orderedClientCols.map(col => (
                       <td key={col.key} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{col.render(c)}</td>
                     ))}
                   </motion.tr>
@@ -832,7 +922,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
                       className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                     />
                   </th>
-                  {TX_COLS.filter(c => txCols.has(c.key)).map(col => (
+                  {orderedTxCols.map(col => (
                     <th key={col.key} onClick={() => handleSort(col.key)} className={thCls}>
                       <span className="flex items-center gap-1">{col.label}<SortIcon active={sortKey === col.key} dir={sortDir} /></span>
                     </th>
@@ -857,7 +947,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
                         className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                       />
                     </td>
-                    {TX_COLS.filter(c => txCols.has(c.key)).map(col => (
+                    {orderedTxCols.map(col => (
                       <td key={col.key} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{col.render(tx)}</td>
                     ))}
                   </motion.tr>
@@ -882,7 +972,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
                       className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                     />
                   </th>
-                  {RECRUIT_COLS.filter(c => recruitCols.has(c.key)).map(col => (
+                  {orderedRecruitCols.map(col => (
                     <th key={col.key} onClick={() => handleSort(col.key)} className={thCls}>
                       <span className="flex items-center gap-1">{col.label}<SortIcon active={sortKey === col.key} dir={sortDir} /></span>
                     </th>
@@ -907,7 +997,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
                         className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
                       />
                     </td>
-                    {RECRUIT_COLS.filter(c => recruitCols.has(c.key)).map(col => (
+                    {orderedRecruitCols.map(col => (
                       <td key={col.key} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{col.render(r)}</td>
                     ))}
                   </motion.tr>
