@@ -34,8 +34,8 @@ export function RevenueChart({ data }: { data: MonthlyPnL[] }) {
           <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <defs>
               <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(235, 75%, 60%)" stopOpacity={0.15}/>
-                <stop offset="95%" stopColor="hsl(235, 75%, 60%)" stopOpacity={0}/>
+                <stop offset="5%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.15}/>
+                <stop offset="95%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0}/>
               </linearGradient>
               <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="hsl(0, 84%, 60%)" stopOpacity={0.1}/>
@@ -46,7 +46,7 @@ export function RevenueChart({ data }: { data: MonthlyPnL[] }) {
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} />
             <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v >= 1000 ? `${v/1000}k` : v}`} />
             <Tooltip content={<CustomTooltip />} />
-            <Area type="monotone" dataKey="income" stroke="hsl(235, 75%, 60%)" strokeWidth={2} fill="url(#incomeGrad)" name="Income" />
+            <Area type="monotone" dataKey="income" stroke="hsl(142, 71%, 45%)" strokeWidth={2} fill="url(#incomeGrad)" name="Income" />
             <Area type="monotone" dataKey="expenses" stroke="hsl(0, 84%, 60%)" strokeWidth={2} fill="url(#expenseGrad)" name="Expenses" />
           </AreaChart>
         </ResponsiveContainer>

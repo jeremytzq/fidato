@@ -26,28 +26,35 @@ export function StatCard({ title, value, subtitle, trend, iconName, iconColor = 
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.07, ease: 'easeOut' }}
-      whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}
-      className="bg-card rounded-xl border border-border p-3 sm:p-5 cursor-default transition-shadow"
+      whileHover={{ y: -2, boxShadow: '0 8px 28px rgba(0,0,0,0.09)' }}
+      className="bg-card rounded-xl border border-border p-4 sm:p-5 cursor-default transition-shadow relative overflow-hidden"
     >
-      {/* Icon row */}
-      <div
-        className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3"
-        style={{ background: `${iconColor}18` }}
-      >
-        <Icon size={15} className="sm:hidden" style={{ color: iconColor }} />
-        <Icon size={18} className="hidden sm:block" style={{ color: iconColor }} />
+      {/* Colored top accent stripe */}
+      <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: iconColor }} />
+
+      {/* Icon + label row */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none mt-1">
+          {title}
+        </p>
+        {/* Icon with proper opacity background */}
+        <div className="relative flex-shrink-0" style={{ width: 36, height: 36 }}>
+          <div className="absolute inset-0 rounded-xl" style={{ background: iconColor, opacity: 0.12 }} />
+          <div className="relative w-full h-full flex items-center justify-center" style={{ color: iconColor }}>
+            <Icon size={17} />
+          </div>
+        </div>
       </div>
-      {/* Title */}
-      <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 sm:mb-3 leading-tight">
-        {title}
-      </p>
+
       {/* Value */}
-      <p className="text-lg sm:text-2xl font-bold text-foreground tracking-tight leading-none">{value}</p>
+      <p className="text-xl sm:text-2xl font-bold text-foreground tracking-tight leading-none numeric">{value}</p>
+
       {subtitle && (
-        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{subtitle}</p>
+        <p className="text-xs text-muted-foreground mt-1.5">{subtitle}</p>
       )}
+
       {trend && (
-        <div className={cn('flex items-center gap-1 mt-2 text-xs font-medium', positive ? 'text-green-600' : 'text-red-500')}>
+        <div className={cn('flex items-center gap-1 mt-2.5 text-xs font-medium', positive ? 'text-green-600' : 'text-red-500')}>
           {positive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
           <span>{positive ? '+' : ''}{trend.value}% {trend.label}</span>
         </div>

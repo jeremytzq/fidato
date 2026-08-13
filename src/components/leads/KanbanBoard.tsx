@@ -13,13 +13,13 @@ import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activity'
 import { cn } from '@/utils/cn'
 
-const COLUMNS: { id: LeadStatus; label: string; color: string }[] = [
-  { id: 'New', label: 'New', color: 'hsl(235, 75%, 60%)' },
-  { id: 'Contacted', label: 'Contacted', color: 'hsl(280, 65%, 60%)' },
-  { id: 'Qualified', label: 'Qualified', color: 'hsl(38, 92%, 50%)' },
-  { id: 'Negotiating', label: 'Negotiating', color: 'hsl(25, 95%, 53%)' },
-  { id: 'Won', label: 'Won', color: 'hsl(142, 71%, 45%)' },
-  { id: 'Lost', label: 'Lost', color: 'hsl(0, 84%, 60%)' },
+const COLUMNS: { id: LeadStatus; label: string; color: string; bg: string; badge: string }[] = [
+  { id: 'New',         label: 'New',         color: 'hsl(235,75%,60%)',  bg: 'hsla(235,75%,60%,0.07)',  badge: 'hsla(235,75%,60%,0.15)' },
+  { id: 'Contacted',  label: 'Contacted',   color: 'hsl(280,65%,60%)',  bg: 'hsla(280,65%,60%,0.07)',  badge: 'hsla(280,65%,60%,0.15)' },
+  { id: 'Qualified',  label: 'Qualified',   color: 'hsl(38,92%,50%)',   bg: 'hsla(38,92%,50%,0.07)',   badge: 'hsla(38,92%,50%,0.18)'  },
+  { id: 'Negotiating',label: 'Negotiating', color: 'hsl(25,95%,53%)',   bg: 'hsla(25,95%,53%,0.07)',   badge: 'hsla(25,95%,53%,0.16)'  },
+  { id: 'Won',        label: 'Won',         color: 'hsl(142,71%,45%)',  bg: 'hsla(142,71%,45%,0.07)',  badge: 'hsla(142,71%,45%,0.15)' },
+  { id: 'Lost',       label: 'Lost',        color: 'hsl(0,84%,60%)',    bg: 'hsla(0,84%,60%,0.07)',    badge: 'hsla(0,84%,60%,0.15)'   },
 ]
 
 const GRADE_STYLES = {
@@ -197,15 +197,23 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon }: 
           return (
             <div key={col.id} className="flex-shrink-0 w-64 flex flex-col h-full min-h-0">
               {/* Column header — stays pinned while cards scroll below */}
-              <div className="flex items-center justify-between mb-3 flex-shrink-0">
+              <div
+                className="flex items-center justify-between mb-3 flex-shrink-0 px-3 py-2.5 rounded-xl"
+                style={{ background: col.bg, borderTop: `3px solid ${col.color}` }}
+              >
                 <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: col.color }} />
                   <span className="text-sm font-semibold text-foreground">{col.label}</span>
-                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{colLeads.length}</span>
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: col.badge, color: col.color }}
+                  >
+                    {colLeads.length}
+                  </span>
                 </div>
                 <button
                   onClick={() => onAddLead(col.id)}
-                  className="p-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  className="p-1 rounded-lg transition-colors hover:bg-white/40"
+                  style={{ color: col.color }}
                 >
                   <Plus size={14} />
                 </button>

@@ -16,6 +16,27 @@ import { NumberInput } from '@/components/ui/NumberInput'
 const INCOME_CATS: IncomeCategory[] = ['Commission', 'Consultation', 'Referral Fee', 'Other']
 const EXPENSE_CATS: ExpenseCategory[] = ['Branding', 'Cobroke Comms', 'Content Creation', 'Gifts', 'Listing Portals', 'Marketing', 'Referral Fees', 'Software', 'Staging', 'Transport', 'Other']
 
+const INCOME_COLORS: Record<string, string> = {
+  'Commission':   'hsl(142, 71%, 45%)',
+  'Consultation': 'hsl(235, 75%, 60%)',
+  'Referral Fee': 'hsl(38, 92%, 50%)',
+  'Other':        'hsl(280, 65%, 60%)',
+}
+
+const EXPENSE_COLORS: Record<string, string> = {
+  'Branding':         'hsl(235, 75%, 60%)',
+  'Cobroke Comms':    'hsl(280, 65%, 60%)',
+  'Content Creation': 'hsl(38, 92%, 50%)',
+  'Gifts':            'hsl(336, 80%, 58%)',
+  'Listing Portals':  'hsl(25, 95%, 53%)',
+  'Marketing':        'hsl(197, 71%, 48%)',
+  'Referral Fees':    'hsl(162, 63%, 41%)',
+  'Software':         'hsl(261, 68%, 60%)',
+  'Staging':          'hsl(316, 72%, 55%)',
+  'Transport':        'hsl(0, 84%, 60%)',
+  'Other':            'hsl(220, 14%, 60%)',
+}
+
 const CHART_TOOLTIP = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
@@ -127,8 +148,9 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
           const Icon = s.icon
           return (
             <div key={s.title} className="bg-card border border-border rounded-xl p-3 sm:p-5">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3" style={{ background: `${s.color}18` }}>
-                <Icon size={15} style={{ color: s.color }} />
+              <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3">
+                <div className="absolute inset-0 rounded-lg sm:rounded-xl" style={{ background: s.color, opacity: 0.12 }} />
+                <div className="relative" style={{ color: s.color }}><Icon size={15} /></div>
               </div>
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 sm:mb-0 leading-tight">{s.title}</p>
               <p className="text-lg sm:text-2xl font-bold tracking-tight mt-1" style={{ color: s.color }}>{s.value}</p>
@@ -179,14 +201,18 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
             {incomeByCategory.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No income recorded yet</p>}
             {incomeByCategory.map(({ cat, amount }) => {
               const pct = totalIncome > 0 ? (amount / totalIncome) * 100 : 0
+              const barColor = INCOME_COLORS[cat] ?? 'hsl(142, 71%, 45%)'
               return (
                 <div key={cat}>
                   <div className="flex justify-between text-sm mb-1.5">
-                    <span className="text-foreground font-medium">{cat}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: barColor }} />
+                      <span className="text-foreground font-medium">{cat}</span>
+                    </div>
                     <span className="text-muted-foreground">{formatCurrency(amount)} <span className="text-xs">({formatPercent(pct)})</span></span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
                   </div>
                 </div>
               )
@@ -204,14 +230,18 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
             {expenseByCategory.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No expenses recorded yet</p>}
             {expenseByCategory.map(({ cat, amount }) => {
               const pct = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0
+              const barColor = EXPENSE_COLORS[cat] ?? 'hsl(0, 84%, 60%)'
               return (
                 <div key={cat}>
                   <div className="flex justify-between text-sm mb-1.5">
-                    <span className="text-foreground font-medium">{cat}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: barColor }} />
+                      <span className="text-foreground font-medium">{cat}</span>
+                    </div>
                     <span className="text-muted-foreground">{formatCurrency(amount)} <span className="text-xs">({formatPercent(pct)})</span></span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full bg-red-500 transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
                   </div>
                 </div>
               )
