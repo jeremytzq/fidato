@@ -6,7 +6,7 @@ import { Input, Select } from '@/components/ui/Input'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
-import { Phone, MessageCircle, Mail, Pencil } from 'lucide-react'
+import { Phone, MessageCircle, Mail, Pencil, Building2, Banknote, MapPin, Zap, Calendar, Cake, Home, Tag } from 'lucide-react'
 import type { Lead, LeadStatus, LeadSource, PropertyType, LeadGrade, ClientType, ActivityLog } from '@/types'
 import { cn } from '@/utils/cn'
 import { scheduleCadence } from '@/lib/cadence'
@@ -198,127 +198,134 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
     const waNum = (lead.whatsapp_number || lead.phone)?.replace(/\D/g, '')
     const allActivities = [...activities, { id: 'added', action: 'Lead added', created_at: lead.created_at }]
 
+    const fields = [
+      { label: 'Mobile',          value: lead.phone,                                          icon: <Phone size={14} /> },
+      { label: 'WhatsApp',        value: lead.whatsapp_number || lead.phone,                  icon: <MessageCircle size={14} /> },
+      { label: 'Email',           value: lead.email,                                          icon: <Mail size={14} /> },
+      { label: 'Property Type',   value: lead.property_type,                                  icon: <Building2 size={14} /> },
+      { label: 'Budget',          value: lead.budget ? `$${lead.budget.toLocaleString()}` : null, icon: <Banknote size={14} /> },
+      { label: 'Project',         value: lead.project_interested,                             icon: <MapPin size={14} /> },
+      { label: 'Source',          value: lead.source,                                         icon: <Zap size={14} /> },
+      { label: 'Follow-up',       value: fmtDate(lead.follow_up_date),                        icon: <Calendar size={14} /> },
+      { label: 'Birthday',        value: fmtDate(lead.birthday),                              icon: <Cake size={14} /> },
+      { label: 'Property Addr.',  value: lead.property_address,                               icon: <Home size={14} /> },
+      { label: 'Correspondence',  value: lead.correspondence_address,                         icon: <Tag size={14} /> },
+    ].filter(f => f.value)
+
     return (
       <Modal open={open} onClose={onClose} title={modalTitle} size="md">
         <div className="-mx-6 -my-5">
 
           {/* Profile header */}
-          <div className="px-6 py-5 text-center border-b border-border">
+          <div className="px-6 pt-6 pb-5 text-center border-b border-border bg-card/50">
             <div
-              className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white mx-auto mb-3"
-              style={{ background: avatarBg(lead.name) }}
+              className="w-18 h-18 rounded-full flex items-center justify-center text-2xl font-bold text-white mx-auto mb-3 ring-4 ring-background shadow-sm"
+              style={{ background: avatarBg(lead.name), width: 72, height: 72 }}
             >
               {initial}
             </div>
-            <div className="text-lg font-bold text-foreground">{displayName}</div>
+            <div className="text-xl font-bold text-foreground tracking-tight">{displayName}</div>
             {lead.display_name && lead.display_name !== lead.name && (
               <div className="text-sm text-muted-foreground mt-0.5">{lead.name}</div>
             )}
 
+            {/* Status pills inline under name */}
+            <div className="flex items-center justify-center gap-1.5 mt-2 flex-wrap">
+              {clientTypeCfg && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-card border border-border text-foreground">
+                  {clientTypeCfg.emoji} {lead.client_type}
+                </span>
+              )}
+              {gradeOpt && (
+                <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border', gradeOpt.active)}>
+                  Grade {gradeOpt.label}
+                </span>
+              )}
+              <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border', statusCfg.bg, statusCfg.text, statusCfg.border)}>
+                {lead.status}
+              </span>
+            </div>
+
             {/* Action buttons */}
-            <div className="flex justify-center gap-6 mt-4">
+            <div className="flex justify-center gap-5 mt-5">
               {lead.phone && (
                 <a href={`tel:${lead.phone}`} className="flex flex-col items-center gap-1.5 group">
-                  <div className="w-11 h-11 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 transition-colors">
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <Phone size={18} />
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium">Call</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">Call</span>
                 </a>
               )}
               {waNum && (
                 <a href={`https://wa.me/65${waNum}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
-                  <div className="w-11 h-11 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 transition-colors">
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <MessageCircle size={18} />
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium">WhatsApp</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">WhatsApp</span>
                 </a>
               )}
               {lead.email && (
                 <a href={`mailto:${lead.email}`} className="flex flex-col items-center gap-1.5 group">
-                  <div className="w-11 h-11 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-500 group-hover:bg-blue-100 transition-colors">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-500 group-hover:bg-blue-100 group-hover:scale-105 transition-all shadow-sm">
                     <Mail size={18} />
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium">Email</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">Email</span>
                 </a>
               )}
               <button onClick={() => setMode('edit')} className="flex flex-col items-center gap-1.5 group">
-                <div className="w-11 h-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary/20 group-hover:scale-105 transition-all shadow-sm">
                   <Pencil size={16} />
                 </div>
-                <span className="text-xs text-muted-foreground font-medium">Edit</span>
+                <span className="text-[11px] text-muted-foreground font-medium">Edit</span>
               </button>
             </div>
           </div>
 
-          <div className="px-6 py-4 space-y-4">
-            {/* Status chips */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-card border border-border rounded-xl p-3">
-                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Type</div>
-                {clientTypeCfg
-                  ? <div className="text-sm font-bold">{clientTypeCfg.emoji} {lead.client_type}</div>
-                  : <div className="text-sm text-muted-foreground">—</div>}
-              </div>
-              <div className="bg-card border border-border rounded-xl p-3">
-                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Grade</div>
-                {gradeOpt
-                  ? <div className={cn('text-sm font-bold', gradeOpt.active.split(' ').find(c => c.startsWith('text-')))}>{gradeOpt.label}</div>
-                  : <div className="text-sm text-muted-foreground">—</div>}
-              </div>
-              <div className="bg-card border border-border rounded-xl p-3">
-                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Stage</div>
-                <span className={cn('inline-block text-xs font-semibold px-2 py-0.5 rounded-full border', statusCfg.bg, statusCfg.text, statusCfg.border)}>
-                  {lead.status}
-                </span>
-              </div>
-            </div>
+          <div className="px-6 py-5 space-y-5">
 
-            {/* Detail fields */}
-            <div className="border border-border rounded-xl overflow-hidden divide-y divide-border">
-              {[
-                { label: 'Mobile',         value: lead.phone },
-                { label: 'WhatsApp',       value: lead.whatsapp_number || lead.phone },
-                { label: 'Email',          value: lead.email },
-                { label: 'Property Type',  value: lead.property_type },
-                { label: 'Budget',         value: lead.budget ? `$${lead.budget.toLocaleString()}` : null },
-                { label: 'Project',        value: lead.project_interested },
-                { label: 'Source',         value: lead.source },
-                { label: 'Follow-up',      value: fmtDate(lead.follow_up_date) },
-                { label: 'Birthday',       value: fmtDate(lead.birthday) },
-                { label: 'Property Addr.', value: lead.property_address },
-                { label: 'Correspondence', value: lead.correspondence_address },
-              ].filter(f => f.value).map(f => (
-                <div key={f.label} className="px-4 py-2.5">
-                  <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{f.label}</div>
-                  <div className="text-sm font-medium text-foreground">{f.value}</div>
-                </div>
-              ))}
-            </div>
+            {/* Contact & detail fields */}
+            {fields.length > 0 && (
+              <div className="border border-border rounded-2xl overflow-hidden divide-y divide-border">
+                {fields.map(f => (
+                  <div key={f.label} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
+                    <div className="text-muted-foreground flex-shrink-0 w-5 flex justify-center">
+                      {f.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider leading-none mb-0.5">{f.label}</div>
+                      <div className="text-sm font-medium text-foreground truncate">{f.value}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Notes */}
             {lead.notes && (
               <div>
                 <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</div>
-                <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/40 rounded-xl px-3 py-2.5">{lead.notes}</div>
+                <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/40 border border-border rounded-2xl px-4 py-3">{lead.notes}</div>
               </div>
             )}
 
             {/* Cold lead cadence */}
             {lead.client_type === 'Cold' && <FollowUpCadence lead={lead} userId={lead.user_id} />}
 
-            {/* Activity timeline */}
+            {/* Activity timeline — 2-column */}
             <div>
               <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Activity</div>
-              <div className="space-y-0">
+              <div>
                 {allActivities.map((a, i) => (
                   <div key={a.id} className="flex gap-3">
-                    <div className="flex flex-col items-center w-4 flex-shrink-0">
-                      <div className="w-2 h-2 rounded-full bg-primary/50 mt-1.5" />
-                      {i < allActivities.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
+                    {/* dot + vertical connector */}
+                    <div className="flex flex-col items-center w-5 flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-primary/60 mt-1.5 flex-shrink-0" />
+                      {i < allActivities.length - 1 && <div className="w-px flex-1 bg-border mt-1.5 mb-0" />}
                     </div>
-                    <div className="pb-3">
-                      <div className="text-xs font-medium text-foreground">{a.action}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">{fmtActivityTime(a.created_at)}</div>
+                    {/* 2-col: action left, date right */}
+                    <div className="flex justify-between items-baseline gap-4 flex-1 pb-4">
+                      <span className="text-sm font-medium text-foreground leading-snug">{a.action}</span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0 tabular-nums">{fmtActivityTime(a.created_at)}</span>
                     </div>
                   </div>
                 ))}
@@ -326,15 +333,15 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
             </div>
 
             {/* Delete */}
-            <div className="pt-1">
+            <div className="pt-1 border-t border-border">
               {!confirmDelete ? (
-                <button onClick={() => setConfirmDelete(true)} className="w-full text-sm text-destructive/70 hover:text-destructive py-2 transition-colors">
+                <button onClick={() => setConfirmDelete(true)} className="w-full text-sm text-destructive/60 hover:text-destructive py-2.5 transition-colors">
                   Delete Lead
                 </button>
               ) : (
-                <div className="flex gap-2">
-                  <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2 text-sm border border-border rounded-lg text-muted-foreground hover:bg-muted transition-colors">Cancel</button>
-                  <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 text-sm bg-destructive/10 border border-destructive/20 rounded-lg text-destructive hover:bg-destructive/20 transition-colors">
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2.5 text-sm border border-border rounded-xl text-muted-foreground hover:bg-muted transition-colors">Cancel</button>
+                  <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 text-sm bg-destructive/10 border border-destructive/20 rounded-xl text-destructive hover:bg-destructive/20 transition-colors font-medium">
                     {deleting ? 'Deleting…' : 'Confirm Delete'}
                   </button>
                 </div>
