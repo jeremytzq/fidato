@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect, useCallback, ReactNode } fr
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/Badge'
-import { Download, Search, ChevronUp, ChevronDown, Sparkles, Trash2, AlertTriangle, X, Columns3, Pencil, GripVertical } from 'lucide-react'
+import { Download, Search, ChevronUp, ChevronDown, Sparkles, Trash2, AlertTriangle, X, Columns3, Pencil, GripVertical, Copy, CheckCircle2, Phone } from 'lucide-react'
 import type { Lead, Client, Transaction, RecruitLead } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
@@ -281,6 +281,156 @@ const SEED_CLIENTS = [
   { name: 'Patricia Chan', email: 'patriciachan@gmail.com', phone: '96600123', property_type: 'HDB', notes: 'Sold Bishan 5-room HDB. Looking to upsize next year.' },
 ]
 
+// ── Find Duplicates Modal ─────────────────────────────────────────────────────
+
+const DB_AVATAR_COLORS = ['#5B6CF8', '#E88C30', '#4CAF7D', '#E05C5C', '#8A6FA8', '#6786A1', '#364863']
+function dbAvatarBg(name: string) {
+  return DB_AVATAR_COLORS[name ? name.charCodeAt(0) % DB_AVATAR_COLORS.length : 0]
+}
+
+function FindDupesModal({ items, table, onClose, onDeleted }: {
+  items: { id: string; name: string; phone?: string | null; status?: string; grade?: string | null }[]
+  table: string
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const supabase = createClient()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const dupeGroups = (() => {
+    const map = new Map<string, typeof items>()
+    for (const r of items) {
+      if (!r.phone) continue
+      const key = r.phone.replace(/\D/g, '')
+      if (!key) continue
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(r)
+    }
+    return Array.from(map.values()).filter(g => g.length > 1)
+  })()
+
+  const deleteOne = async (id: string) => {
+    setDeletingId(id)
+    await supabase.from(table).delete().eq('id', id)
+    setDeletingId(null)
+    onDeleted()
+  }
+
+  const keepOne = async (keepId: string, group: typeof items) => {
+    const toDelete = group.filter(r => r.id !== keepId).map(r => r.id)
+    setDeletingId(keepId)
+    await supabase.from(table).delete().in('id', toDelete)
+    setDeletingId(null)
+    onDeleted()
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+              <Copy size={14} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-sm">Duplicate Mobile Numbers</p>
+              <p className="text-xs text-muted-foreground">Records sharing the same phone number</p>
+            </div>
+          </div>
+          <motion.button
+            onClick={onClose}
+            whileHover={{ rotate: 90 }}
+            transition={{ duration: 0.18 }}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+          >
+            <X size={16} />
+          </motion.button>
+        </div>
+
+        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          {dupeGroups.length === 0 ? (
+            <div className="text-center py-10">
+              <CheckCircle2 size={32} className="text-green-500 mx-auto mb-3" />
+              <p className="text-sm font-medium text-foreground">No duplicates found</p>
+              <p className="text-xs text-muted-foreground mt-1">All mobile numbers are unique.</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {dupeGroups.length} duplicate group{dupeGroups.length !== 1 ? 's' : ''} found.
+              </p>
+              <div className="space-y-3">
+                {dupeGroups.map((group, gi) => (
+                  <div key={gi} className="rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900 overflow-hidden">
+                    <div className="flex items-center gap-2 px-3 py-2 border-b border-amber-200 dark:border-amber-900 bg-amber-100/60 dark:bg-amber-900/30">
+                      <Phone size={12} className="text-amber-600" />
+                      <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">{group[0].phone}</span>
+                      <span className="ml-auto text-[10px] text-amber-600 dark:text-amber-500 font-medium">{group.length} records</span>
+                    </div>
+                    <div className="divide-y divide-amber-100 dark:divide-amber-900/50">
+                      {group.map(r => (
+                        <div key={r.id} className="flex items-center gap-3 px-3 py-2.5">
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                            style={{ background: dbAvatarBg(r.name) }}
+                          >
+                            {r.name[0].toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
+                            {r.status && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5">{r.status}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              onClick={() => keepOne(r.id, group)}
+                              disabled={deletingId !== null}
+                              title="Keep this, delete the rest"
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-40"
+                            >
+                              Keep
+                            </button>
+                            <button
+                              onClick={() => deleteOne(r.id)}
+                              disabled={deletingId !== null}
+                              title="Delete this record"
+                              className="p-1.5 rounded-lg hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors disabled:opacity-40"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end px-5 pb-5">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+            Done
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 // ── Bulk Edit Modal ────────────────────────────────────────────────────────────
 
 interface BulkFields {
@@ -480,6 +630,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
   const [bulkSaving, setBulkSaving] = useState(false)
+  const [dupesOpen, setDupesOpen] = useState(false)
 
   // Column visibility — lazy-initialised from localStorage
   const [leadCols, setLeadCols] = useState<Set<string>>(() => loadCols('db-lead-cols', LEAD_COLS))
@@ -804,6 +955,16 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
         {tab === 'recruits' && (
           <ColPicker cols={RECRUIT_COLS} visible={recruitCols} onToggle={toggleRecruitCol} onReset={resetRecruitCols} storageKey="db-recruit-cols" order={recruitColOrder} onReorder={reorderRecruitCols} />
         )}
+
+        {/* Find Duplicates — available for tabs that have a phone field */}
+        {tab !== 'transactions' && (
+          <button
+            onClick={() => setDupesOpen(true)}
+            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Copy size={14} /> Find Duplicates
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -1074,6 +1235,34 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
             onClose={() => setBulkEditOpen(false)}
             onSave={handleBulkEdit}
             saving={bulkSaving}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Find Duplicates modal */}
+      <AnimatePresence>
+        {dupesOpen && tab === 'leads' && (
+          <FindDupesModal
+            items={leads}
+            table="leads"
+            onClose={() => setDupesOpen(false)}
+            onDeleted={() => { setDupesOpen(false); startTransition(() => router.refresh()) }}
+          />
+        )}
+        {dupesOpen && tab === 'clients' && (
+          <FindDupesModal
+            items={clients}
+            table="clients"
+            onClose={() => setDupesOpen(false)}
+            onDeleted={() => { setDupesOpen(false); startTransition(() => router.refresh()) }}
+          />
+        )}
+        {dupesOpen && tab === 'recruits' && (
+          <FindDupesModal
+            items={recruits.map(r => ({ ...r, name: r.name, phone: r.phone, status: r.status }))}
+            table="recruitment_leads"
+            onClose={() => setDupesOpen(false)}
+            onDeleted={() => { setDupesOpen(false); startTransition(() => router.refresh()) }}
           />
         )}
       </AnimatePresence>
