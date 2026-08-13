@@ -9,7 +9,7 @@ import { NumberInput } from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Phone, MessageCircle, Pencil, Trash2, Search, FileSpreadsheet, ExternalLink } from 'lucide-react'
+import { Plus, Phone, MessageCircle, Mail, Pencil, Trash2, Search, FileSpreadsheet, ExternalLink, Building2, Banknote, MapPin, Cake, Home, Tag, Calendar } from 'lucide-react'
 import type { Client, PropertyType, ClientType } from '@/types'
 import { formatDate } from '@/utils/format'
 import { pushClientsToGoogleSheets, pullClientsFromGoogleSheets } from '@/lib/googleSheets'
@@ -31,15 +31,25 @@ const EMPTY_FORM = {
   client_type: '' as ClientType | '', notes: '',
 }
 
+const AVATAR_COLORS = ['#5B6CF8', '#E88C30', '#4CAF7D', '#E05C5C', '#8A6FA8', '#6786A1', '#364863']
+function avatarBg(name: string) {
+  return AVATAR_COLORS[name ? name.charCodeAt(0) % AVATAR_COLORS.length : 0]
+}
+
 function ClientFormModal({ open, onClose, client, userId, onSaved }: {
   open: boolean; onClose: () => void; client: Client | null; userId: string; onSaved: () => void
 }) {
   const supabase = createClient()
+  const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
 
   useEffect(() => {
     if (!open) return
+    setConfirmDelete(false)
+    setMode(client ? 'view' : 'edit')
     if (client) setForm({
       name: client.name,
       display_name: client.display_name || '',
@@ -81,13 +91,157 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
       notes: form.notes || null,
       updated_at: new Date().toISOString(),
     }
-    if (client) await supabase.from('clients').update(payload).eq('id', client.id)
-    else await supabase.from('clients').insert({ ...payload, created_at: new Date().toISOString() })
-    setSaving(false)
+    if (client) {
+      await supabase.from('clients').update(payload).eq('id', client.id)
+      setSaving(false)
+      setMode('view')
+    } else {
+      await supabase.from('clients').insert({ ...payload, created_at: new Date().toISOString() })
+      setSaving(false)
+      onClose()
+    }
+    onSaved()
+  }
+
+  const handleDelete = async () => {
+    if (!client) return
+    setDeleting(true)
+    await supabase.from('clients').delete().eq('id', client.id)
+    setDeleting(false)
     onSaved()
     onClose()
   }
 
+  // ── View mode ──────────────────────────────────────────
+  if (mode === 'view' && client) {
+    const displayName = client.display_name || client.name
+    const initial = displayName.charAt(0).toUpperCase()
+    const clientTypeCfg = CLIENT_TYPE_OPTIONS.find(o => o.value === client.client_type)
+    const waNum = (client.whatsapp_number || client.phone)?.replace(/\D/g, '')
+
+    const fields = [
+      { label: 'Mobile',         value: client.phone,                                              icon: <Phone size={14} /> },
+      { label: 'WhatsApp',       value: client.whatsapp_number || client.phone,                    icon: <MessageCircle size={14} /> },
+      { label: 'Email',          value: client.email,                                              icon: <Mail size={14} /> },
+      { label: 'Property Type',  value: client.property_type,                                      icon: <Building2 size={14} /> },
+      { label: 'Budget',         value: client.budget ? `$${client.budget.toLocaleString()}` : null, icon: <Banknote size={14} /> },
+      { label: 'Project',        value: client.project_interested,                                 icon: <MapPin size={14} /> },
+      { label: 'Birthday',       value: client.birthday ? formatDate(client.birthday) : null,      icon: <Cake size={14} /> },
+      { label: 'Property Addr.', value: client.property_address,                                   icon: <Home size={14} /> },
+      { label: 'Correspondence', value: client.correspondence_address,                             icon: <Tag size={14} /> },
+      { label: 'Added',          value: formatDate(client.created_at),                             icon: <Calendar size={14} /> },
+    ].filter(f => f.value)
+
+    return (
+      <Modal open={open} onClose={onClose} title={displayName} size="md">
+        <div className="-mx-6 -my-5">
+
+          {/* Profile header */}
+          <div className="px-6 pt-6 pb-5 text-center border-b border-border bg-card/50">
+            <div
+              className="rounded-full flex items-center justify-center text-2xl font-bold text-white mx-auto mb-3 ring-4 ring-background shadow-sm"
+              style={{ background: avatarBg(client.name), width: 72, height: 72 }}
+            >
+              {initial}
+            </div>
+            <div className="text-xl font-bold text-foreground tracking-tight">{displayName}</div>
+            {client.display_name && client.display_name !== client.name && (
+              <div className="text-sm text-muted-foreground mt-0.5">{client.name}</div>
+            )}
+
+            {/* Client type chip */}
+            {clientTypeCfg && (
+              <div className="flex items-center justify-center mt-2">
+                <span className={cn('inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border', clientTypeCfg.active)}>
+                  {clientTypeCfg.emoji} {client.client_type}
+                </span>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex justify-center gap-5 mt-5">
+              {client.phone && (
+                <a href={`tel:${client.phone}`} className="flex flex-col items-center gap-1.5 group">
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
+                    <Phone size={18} />
+                  </div>
+                  <span className="text-[11px] text-muted-foreground font-medium">Call</span>
+                </a>
+              )}
+              {waNum && (
+                <a href={`https://wa.me/65${waNum}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
+                    <MessageCircle size={18} />
+                  </div>
+                  <span className="text-[11px] text-muted-foreground font-medium">WhatsApp</span>
+                </a>
+              )}
+              {client.email && (
+                <a href={`mailto:${client.email}`} className="flex flex-col items-center gap-1.5 group">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-500 group-hover:bg-blue-100 group-hover:scale-105 transition-all shadow-sm">
+                    <Mail size={18} />
+                  </div>
+                  <span className="text-[11px] text-muted-foreground font-medium">Email</span>
+                </a>
+              )}
+              <button onClick={() => setMode('edit')} className="flex flex-col items-center gap-1.5 group">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary/20 group-hover:scale-105 transition-all shadow-sm">
+                  <Pencil size={16} />
+                </div>
+                <span className="text-[11px] text-muted-foreground font-medium">Edit</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 py-5 space-y-5">
+
+            {/* Contact & detail fields */}
+            {fields.length > 0 && (
+              <div className="border border-border rounded-2xl overflow-hidden divide-y divide-border">
+                {fields.map(f => (
+                  <div key={f.label} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
+                    <div className="text-muted-foreground flex-shrink-0 w-5 flex justify-center">
+                      {f.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider leading-none mb-0.5">{f.label}</div>
+                      <div className="text-sm font-medium text-foreground truncate">{f.value}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Notes */}
+            {client.notes && (
+              <div>
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</div>
+                <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/40 border border-border rounded-2xl px-4 py-3">{client.notes}</div>
+              </div>
+            )}
+
+            {/* Delete */}
+            <div className="pt-1 border-t border-border">
+              {!confirmDelete ? (
+                <button onClick={() => setConfirmDelete(true)} className="w-full text-sm text-destructive/60 hover:text-destructive py-2.5 transition-colors">
+                  Delete Client
+                </button>
+              ) : (
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2.5 text-sm border border-border rounded-xl text-muted-foreground hover:bg-muted transition-colors">Cancel</button>
+                  <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 text-sm bg-destructive/10 border border-destructive/20 rounded-xl text-destructive hover:bg-destructive/20 transition-colors font-medium">
+                    {deleting ? 'Deleting…' : 'Confirm Delete'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
+    )
+  }
+
+  // ── Edit / Add form ────────────────────────────────────
   return (
     <Modal open={open} onClose={onClose} title={client ? 'Edit Client' : 'Add Client'} size="md">
       <div className="space-y-4">
@@ -139,7 +293,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={() => client ? setMode('view') : onClose()}>Cancel</Button>
           <Button onClick={handleSave} loading={saving}>{client ? 'Save Changes' : 'Add Client'}</Button>
         </div>
       </div>
