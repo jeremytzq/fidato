@@ -546,7 +546,7 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
     const toMove = leads.filter(l => ids.includes(l.id))
     if (!confirm(`Move ${toMove.length} lead${toMove.length !== 1 ? 's' : ''} to Recruitment? They will be removed from Leads.`)) return
     const now = new Date().toISOString()
-    await supabase.from('recruitment_leads').insert(
+    const { error } = await supabase.from('recruitment_leads').insert(
       toMove.map(l => ({
         user_id: userId,
         name: l.name,
@@ -560,6 +560,10 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
         updated_at: now,
       }))
     )
+    if (error) {
+      alert(`Move failed: ${error.message}\n\nMake sure you've run the recruitment table migration in Supabase.`)
+      return
+    }
     await supabase.from('leads').delete().in('id', ids)
     setSelectedIds(new Set())
     startTransition(() => router.refresh())
