@@ -65,7 +65,8 @@ function LeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <motion.div
         layout
-        whileHover={{ y: -1, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+        whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.11)' }}
+        transition={{ type: 'spring', stiffness: 400, damping: 28 }}
         className="bg-card border border-border rounded-xl p-4 cursor-grab active:cursor-grabbing space-y-3"
       >
         <div className="flex items-start justify-between gap-2">

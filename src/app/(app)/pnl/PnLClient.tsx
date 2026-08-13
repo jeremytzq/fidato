@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
@@ -147,14 +148,19 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
         {statCards.map((s) => {
           const Icon = s.icon
           return (
-            <div key={s.title} className="bg-card border border-border rounded-xl p-3 sm:p-5">
+            <motion.div
+              key={s.title}
+              whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.09)' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+              className="bg-card border border-border rounded-xl p-3 sm:p-5"
+            >
               <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3">
                 <div className="absolute inset-0 rounded-lg sm:rounded-xl" style={{ background: s.color, opacity: 0.12 }} />
                 <div className="relative" style={{ color: s.color }}><Icon size={15} /></div>
               </div>
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 sm:mb-0 leading-tight">{s.title}</p>
               <p className="text-lg sm:text-2xl font-bold tracking-tight mt-1" style={{ color: s.color }}>{s.value}</p>
-            </div>
+            </motion.div>
           )
         })}
       </div>
@@ -199,7 +205,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
           </CardHeader>
           <div className="space-y-3">
             {incomeByCategory.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No income recorded yet</p>}
-            {incomeByCategory.map(({ cat, amount }) => {
+            {incomeByCategory.map(({ cat, amount }, i) => {
               const pct = totalIncome > 0 ? (amount / totalIncome) * 100 : 0
               const barColor = INCOME_COLORS[cat] ?? 'hsl(142, 71%, 45%)'
               return (
@@ -212,7 +218,13 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
                     <span className="text-muted-foreground">{formatCurrency(amount)} <span className="text-xs">({formatPercent(pct)})</span></span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.7, delay: i * 0.08, ease: 'easeOut' }}
+                      className="h-full rounded-full"
+                      style={{ background: barColor }}
+                    />
                   </div>
                 </div>
               )
@@ -228,7 +240,7 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
           </CardHeader>
           <div className="space-y-3">
             {expenseByCategory.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No expenses recorded yet</p>}
-            {expenseByCategory.map(({ cat, amount }) => {
+            {expenseByCategory.map(({ cat, amount }, i) => {
               const pct = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0
               const barColor = EXPENSE_COLORS[cat] ?? 'hsl(0, 84%, 60%)'
               return (
@@ -241,7 +253,13 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
                     <span className="text-muted-foreground">{formatCurrency(amount)} <span className="text-xs">({formatPercent(pct)})</span></span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.7, delay: i * 0.06, ease: 'easeOut' }}
+                      className="h-full rounded-full"
+                      style={{ background: barColor }}
+                    />
                   </div>
                 </div>
               )

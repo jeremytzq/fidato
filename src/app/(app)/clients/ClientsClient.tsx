@@ -432,10 +432,11 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
               {filtered.map((c, i) => (
                 <motion.tr
                   key={c.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.02 }}
-                  className="hover:bg-muted/30 transition-colors cursor-pointer"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03, duration: 0.2 }}
+                  whileHover={{ backgroundColor: 'hsl(220 14% 94%)' }}
+                  className="transition-colors cursor-pointer"
                   onClick={() => { setEditingClient(c); setModalOpen(true) }}
                 >
                   <td className="px-4 py-3.5">

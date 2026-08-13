@@ -39,6 +39,8 @@ function MobileLeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; 
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
+      whileHover={{ y: -2, boxShadow: '0 6px 20px rgba(0,0,0,0.08)' }}
+      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
       className="bg-card border border-border rounded-xl p-4 space-y-3"
     >
       <div className="flex items-start justify-between gap-2">

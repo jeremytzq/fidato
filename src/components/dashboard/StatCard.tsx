@@ -26,8 +26,8 @@ export function StatCard({ title, value, subtitle, trend, iconName, iconColor = 
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.07, ease: 'easeOut' }}
-      whileHover={{ y: -2, boxShadow: '0 8px 28px rgba(0,0,0,0.09)' }}
-      className="bg-card rounded-xl border border-border p-4 sm:p-5 cursor-default transition-shadow relative overflow-hidden"
+      whileHover={{ y: -3, boxShadow: '0 10px 32px rgba(0,0,0,0.10)' }}
+      className="bg-card rounded-xl border border-border p-4 sm:p-5 cursor-default transition-shadow relative overflow-hidden group"
     >
       {/* Colored top accent stripe */}
       <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: iconColor }} />
@@ -38,12 +38,16 @@ export function StatCard({ title, value, subtitle, trend, iconName, iconColor = 
           {title}
         </p>
         {/* Icon with proper opacity background */}
-        <div className="relative flex-shrink-0" style={{ width: 36, height: 36 }}>
+        <motion.div
+          whileHover={{ scale: 1.15, rotate: 8 }}
+          transition={{ type: 'spring', stiffness: 350, damping: 20 }}
+          className="relative flex-shrink-0" style={{ width: 36, height: 36 }}
+        >
           <div className="absolute inset-0 rounded-xl" style={{ background: iconColor, opacity: 0.12 }} />
           <div className="relative w-full h-full flex items-center justify-center" style={{ color: iconColor }}>
             <Icon size={17} />
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Value */}

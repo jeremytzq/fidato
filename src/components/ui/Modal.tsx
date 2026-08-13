@@ -37,12 +37,14 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
               {/* Sticky header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
                 <h2 className="text-base font-semibold text-foreground">{title}</h2>
-                <button
+                <motion.button
+                  whileHover={{ rotate: 90 }}
+                  transition={{ duration: 0.18, ease: 'easeInOut' }}
                   onClick={onClose}
                   className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <X size={16} />
-                </button>
+                </motion.button>
               </div>
               {/* Scrollable body */}
               <div className="px-6 py-5 overflow-y-auto">{children}</div>
