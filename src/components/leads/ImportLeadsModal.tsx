@@ -405,7 +405,7 @@ export function ImportLeadsModal({ userId, onClose, onImported }: Props) {
                 </div>
                 <div className="text-center">
                   <p className="text-xl font-bold text-foreground">{importedCount} lead{importedCount !== 1 ? 's' : ''} imported</p>
-                  <p className="text-sm text-muted-foreground mt-1">They've been added to your pipeline</p>
+                  <p className="text-sm text-muted-foreground mt-1">They&apos;ve been added to your pipeline</p>
                 </div>
               </div>
             )}
