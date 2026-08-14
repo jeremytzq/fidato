@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { KanbanBoard } from '@/components/leads/KanbanBoard'
 import { LeadModal } from '@/components/leads/LeadModal'
+import { ImportLeadsModal } from '@/components/leads/ImportLeadsModal'
 import { WonConversionModal } from '@/components/leads/WonConversionModal'
 import { Button } from '@/components/ui/Button'
-import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink, Search, X, Copy, CheckCircle2, Trash2 } from 'lucide-react'
+import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink, Search, X, Copy, CheckCircle2, Trash2, Upload } from 'lucide-react'
 import type { Lead, LeadStatus, LeadGrade, ClientType, PropertyType } from '@/types'
 import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
 import { cn } from '@/utils/cn'
@@ -351,6 +352,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [sheetUrl, setSheetUrl] = useState<string | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [dupesOpen, setDupesOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   // Search & filter state
   const [search, setSearch] = useState('')
@@ -447,6 +449,13 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
             className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <Copy size={14} /> Find Duplicates
+          </button>
+          <button
+            onClick={() => setImportOpen(true)}
+            title="Import leads from CSV"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Upload size={14} /> <span className="hidden sm:inline">Import</span>
           </button>
           <Button onClick={() => openAdd()}>
             <Plus size={15} /> Add Lead
@@ -591,6 +600,14 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
           leads={initialLeads}
           onClose={() => setDupesOpen(false)}
           onDeleted={handleSaved}
+        />
+      )}
+
+      {importOpen && (
+        <ImportLeadsModal
+          userId={userId}
+          onClose={() => setImportOpen(false)}
+          onImported={handleSaved}
         />
       )}
     </div>
