@@ -386,7 +386,7 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
     <div className="p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Clients</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Clients</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{initialClients.length} clients</p>
         </div>
         <div className="flex items-center gap-2">
@@ -474,7 +474,7 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
                   <td className="px-4 py-3.5 text-sm text-muted-foreground">{c.phone || '—'}</td>
                   <td className="px-4 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">{c.email || '—'}</td>
                   <td className="px-4 py-3.5 hidden md:table-cell">
-                    {c.property_type ? <Badge label={c.property_type} /> : <span className="text-sm text-muted-foreground">—</span>}
+                    {c.property_type ? <span className="text-sm text-foreground">{c.property_type.split(',').map(t => t.trim()).join(', ')}</span> : <span className="text-sm text-muted-foreground">—</span>}
                   </td>
                   <td className="px-4 py-3.5 text-sm text-muted-foreground hidden lg:table-cell max-w-48">
                     <span className="line-clamp-1">{c.notes || '—'}</span>

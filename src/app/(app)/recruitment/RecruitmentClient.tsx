@@ -612,7 +612,7 @@ export default function RecruitmentClient({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Recruitment</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Recruitment</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{initialRecruits.length} recruits tracked</p>
         </div>
         <div className="flex items-center gap-2">
@@ -627,12 +627,13 @@ export default function RecruitmentClient({
           )}
           <button
             onClick={() => setDupesOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Find Duplicates"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <Copy size={14} /> Find Duplicates
+            <Copy size={14} /> <span className="hidden sm:inline">Find Duplicates</span>
           </button>
           <Button onClick={openAdd}>
-            <UserPlus size={15} /> Add Recruit
+            <UserPlus size={15} /> <span className="hidden sm:inline">Add Recruit</span><span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>

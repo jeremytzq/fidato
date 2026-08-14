@@ -30,7 +30,7 @@ const GRADE_STYLES: Record<string, string> = {
   C: 'bg-blue-50 text-blue-600 border border-blue-200',
 }
 
-const SELECT_CLS = 'h-9 rounded-lg border border-border bg-card px-3 pr-7 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none cursor-pointer'
+const SELECT_CLS = 'h-9 rounded-lg border border-border bg-card px-3 pr-7 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none cursor-pointer max-w-[8rem] sm:max-w-none'
 
 function MobileLeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit: (l: Lead) => void }) {
   return (
@@ -51,7 +51,7 @@ function MobileLeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; 
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground truncate">{toTitleCase(lead.name)}</p>
             {lead.property_type && (
-              <p className="text-xs text-muted-foreground">{lead.property_type}</p>
+              <p className="text-xs text-muted-foreground">{lead.property_type.split(',').map(t => t.trim()).join(', ')}</p>
             )}
           </div>
         </div>
@@ -425,7 +425,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Leads</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Leads</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {hasFilters
               ? `${filteredLeads.length} of ${initialLeads.length} shown`

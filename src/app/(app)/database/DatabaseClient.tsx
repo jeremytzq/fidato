@@ -870,10 +870,10 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
   const selectedCount = selectedIds.size
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Database</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Database</h1>
           <p className="text-sm text-muted-foreground mt-0.5">All your data in one place</p>
         </div>
         <div className="flex gap-2">
@@ -888,30 +888,34 @@ export default function DatabaseClient({ leads, clients, transactions, recruits,
           )}
           <button
             onClick={exportData}
+            title="Export CSV"
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <Download size={14} /> Export CSV
+            <Download size={14} /> <span className="hidden sm:inline">Export CSV</span>
           </button>
           <button
             onClick={openResetModal}
+            title="Reset all data"
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-sm font-medium text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors dark:border-red-900 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
           >
-            <Trash2 size={14} /> Reset
+            <Trash2 size={14} /> <span className="hidden sm:inline">Reset</span>
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 p-1 rounded-xl bg-muted w-fit">
-        {tabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => { setTab(t.id); setSearch(''); setStatusFilter('') }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            {t.label} <span className="ml-1.5 text-xs opacity-60">({t.count})</span>
-          </button>
-        ))}
+      <div className="overflow-x-auto -mx-3 sm:mx-0 mb-5">
+        <div className="flex gap-1 p-1 rounded-xl bg-muted w-fit min-w-full sm:min-w-0 mx-3 sm:mx-0">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => { setTab(t.id); setSearch(''); setStatusFilter('') }}
+              className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${tab === t.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              {t.label} <span className="ml-1 sm:ml-1.5 text-xs opacity-60">({t.count})</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Filters + column picker */}
