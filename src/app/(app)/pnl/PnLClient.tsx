@@ -306,6 +306,51 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
         </Card>
       </div>
 
+      {/* Recent entries (editable / deletable) */}
+      <div className="mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Entries</CardTitle>
+            <span className="text-xs text-muted-foreground">Edit or delete individual income &amp; expense records</span>
+          </CardHeader>
+          <div className="px-4 sm:px-5 pb-4">
+            {(() => {
+              const rows = [
+                ...initialIncomes.map(r => ({ kind: 'income' as const, id: r.id, category: r.category, amount: r.amount, date: r.date, description: r.description })),
+                ...initialExpenses.map(r => ({ kind: 'expense' as const, id: r.id, category: r.category, amount: -r.amount, date: r.date, description: r.description })),
+              ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+              if (rows.length === 0) return <p className="text-sm text-muted-foreground text-center py-4">No entries yet. Add your first income or expense above.</p>
+              return (
+                <div className="space-y-1.5">
+                  {rows.slice(0, 25).map(row => {
+                    const isIncome = row.kind === 'income'
+                    const sign = isIncome ? '+' : '-'
+                    return (
+                      <div key={`${row.kind}-${row.id}`} className="flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-muted/40 transition-colors">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isIncome ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
+                            {isIncome ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{row.description || row.category}</p>
+                            <p className="text-xs text-muted-foreground">{row.category} &middot; {row.date}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`text-sm font-semibold ${isIncome ? 'text-emerald-600' : 'text-red-500'}`}>{sign}{formatCurrency(Math.abs(row.amount))}</span>
+                          <button onClick={() => startEdit(isIncome ? 'income' : 'expense', { id: row.id, category: row.category, amount: Math.abs(row.amount), date: row.date, description: row.description, user_id: '' } as any)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" aria-label="Edit entry"><Pencil size={13} /></button>
+                          <button onClick={() => setDeleteTarget({ kind: isIncome ? 'income' : 'expense', id: row.id, label: (row.description || row.category) })} className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors" aria-label="Delete entry"><Trash2 size={13} /></button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </div>
+        </Card>
+      </div>
+
       {/* Add / Edit Income modal */}
       <Modal open={addModal === 'income'} onClose={() => { setAddModal(null); setEditTarget(null); setSaveError(null) }} title={editTarget?.kind === 'income' ? 'Edit Income' : 'Add Income'}>
         <div className="space-y-4">
