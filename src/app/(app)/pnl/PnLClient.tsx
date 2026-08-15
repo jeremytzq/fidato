@@ -65,6 +65,9 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [incomeForm, setIncomeForm] = useState({ category: 'Commission' as IncomeCategory, amount: '', description: '', date: '' })
   const [expenseForm, setExpenseForm] = useState({ category: 'Marketing' as ExpenseCategory, amount: '', description: '', date: '' })
+  const [editTarget, setEditTarget] = useState<{ kind: 'income' | 'expense'; id: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ kind: 'income' | 'expense'; id: string; label: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const handleSaved = () => startTransition(() => router.refresh())
 
