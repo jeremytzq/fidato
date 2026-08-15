@@ -106,10 +106,14 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
     if (!incomeForm.amount || !incomeForm.date) return
     setSaving(true)
     setSaveError(null)
-    const { error } = await supabase.from('income').insert({ user_id: userId, category: incomeForm.category, amount: parseFloat(incomeForm.amount), description: incomeForm.description || null, date: incomeForm.date, created_at: new Date().toISOString() })
+    const payload = { user_id: userId, category: incomeForm.category, amount: parseFloat(incomeForm.amount), description: incomeForm.description || null, date: incomeForm.date }
+    const { error } = editTarget?.id
+      ? await supabase.from('income').update(payload).eq('id', editTarget.id)
+      : await supabase.from('income').insert({ ...payload, created_at: new Date().toISOString() })
     setSaving(false)
     if (error) { setSaveError(error.message); return }
     setAddModal(null)
+    setEditTarget(null)
     setIncomeForm({ category: 'Commission', amount: '', description: '', date: '' })
     handleSaved()
   }
@@ -118,11 +122,42 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
     if (!expenseForm.amount || !expenseForm.date) return
     setSaving(true)
     setSaveError(null)
-    const { error } = await supabase.from('expenses').insert({ user_id: userId, category: expenseForm.category, amount: parseFloat(expenseForm.amount), description: expenseForm.description || null, date: expenseForm.date, created_at: new Date().toISOString() })
+    const payload = { user_id: userId, category: expenseForm.category, amount: parseFloat(expenseForm.amount), description: expenseForm.description || null, date: expenseForm.date }
+    const { error } = editTarget?.id
+      ? await supabase.from('expenses').update(payload).eq('id', editTarget.id)
+      : await supabase.from('expenses').insert({ ...payload, created_at: new Date().toISOString() })
     setSaving(false)
     if (error) { setSaveError(error.message); return }
     setAddModal(null)
+    setEditTarget(null)
     setExpenseForm({ category: 'Marketing', amount: '', description: '', date: '' })
+    handleSaved()
+  }
+
+  const startEdit = (kind: 'income' | 'expense', rec: Income | Expense) => {
+    const isIncome = kind === 'income'
+    setEditTarget({ kind, id: rec.id })
+    if (isIncome) {
+      const r = rec as Income
+      setIncomeForm({ category: r.category, amount: String(r.amount), description: r.description || '', date: r.date })
+      setAddModal('income')
+    } else {
+      const r = rec as Expense
+      setExpenseForm({ category: r.category, amount: String(r.amount), description: r.description || '', date: r.date })
+      setAddModal('expense')
+    }
+    setSaveError(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setSaveError(null)
+    const table = deleteTarget.kind === 'income' ? 'income' : 'expenses'
+    const { error } = await supabase.from(table).delete().eq('id', deleteTarget.id)
+    setDeleting(false)
+    if (error) { setSaveError(error.message); return }
+    setDeleteTarget(null)
     handleSaved()
   }
 
