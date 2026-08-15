@@ -171,6 +171,22 @@ export interface ShareLinkView {
 export type CadenceChannel = 'call' | 'voicemail' | 'whatsapp'
 export type CadenceStatus = 'pending' | 'done' | 'skipped'
 
+export interface AutomationSettings {
+  id: string
+  user_id: string
+  auto_set_deal_value: boolean
+  default_deal_value: number | null
+  auto_set_due_date: boolean
+  due_date_days_offset: number
+  auto_reminder: boolean
+  reminder_days_offset: number
+  auto_create_activity: boolean
+  stage_notification: boolean
+  notify_stages: LeadStatus[]
+  created_at: string
+  updated_at: string
+}
+
 export interface CadenceFollowUp {
   id: string
   user_id: string

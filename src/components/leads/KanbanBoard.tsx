@@ -7,10 +7,11 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Phone, MessageCircle, Plus, MoreHorizontal, Calendar, Bell } from 'lucide-react'
-import type { Lead, LeadStatus } from '@/types'
+import type { Lead, LeadStatus, AutomationSettings } from '@/types'
 import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activity'
+import { getAutomationSettings } from '@/lib/automations'
 import { cn } from '@/utils/cn'
 
 const COLUMNS: { id: LeadStatus; label: string; color: string; bg: string; badge: string }[] = [
@@ -49,7 +50,7 @@ function DroppableColumnBody({ colId, leads, children }: {
   )
 }
 
-function LeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit: (l: Lead) => void }) {
+function LeadCard({ lead, userId, onEdit, onHoverChange }: { lead: Lead; userId: string; onEdit: (l: Lead) => void; onHoverChange?: (id: string | null) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lead.id })
 
   const style = {
@@ -62,7 +63,14 @@ function LeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit
   const handleWhatsApp = () => logActivity(userId, lead.id, 'Sent WhatsApp message')
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onMouseEnter={() => onHoverChange?.(lead.id)}
+      onMouseLeave={() => onHoverChange?.(null)}
+    >
       <motion.div
         layout
         whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.11)' }}
@@ -146,21 +154,27 @@ function LeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit
   )
 }
 
-export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon }: {
+export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon, onHoverLead }: {
   initialLeads: Lead[]
   userId: string
   onEdit: (l: Lead) => void
   onAddLead: (status: LeadStatus) => void
   onWon?: (lead: Lead) => void
+  onHoverLead?: (id: string | null) => void
 }) {
   const [leads, setLeads] = useState(initialLeads)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [automation, setAutomation] = useState<AutomationSettings | null>(null)
   const supabase = createClient()
 
   // Sync with parent when server refreshes data after a save
   useEffect(() => {
     setLeads(initialLeads)
   }, [initialLeads])
+
+  useEffect(() => {
+    getAutomationSettings(userId).then(setAutomation)
+  }, [userId])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -186,6 +200,22 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon }: 
 
     setLeads(prev => prev.map(l => l.id === active.id ? { ...l, status: newStatus } : l))
     await supabase.from('leads').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', active.id)
+
+    if (automation?.auto_create_activity) {
+      logActivity(userId, active.id, `Stage changed to ${newStatus}`)
+    }
+    if (
+      automation?.stage_notification &&
+      automation.notify_stages.includes(newStatus) &&
+      typeof Notification !== 'undefined' &&
+      Notification.permission === 'granted'
+    ) {
+      new Notification(`${activeLead?.name ? toTitleCase(activeLead.name) : 'Lead'} moved to ${newStatus}`, {
+        body: `Stage changed to ${newStatus}`,
+        icon: '/favicon.ico',
+        tag: `stage-${active.id}-${newStatus}`,
+      })
+    }
   }
 
   const activeLead = activeId ? leads.find(l => l.id === activeId) : null
@@ -226,7 +256,7 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon }: 
                   <DroppableColumnBody colId={col.id} leads={colLeads}>
                     <AnimatePresence>
                       {colLeads.map(lead => (
-                        <LeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} />
+                        <LeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} onHoverChange={onHoverLead} />
                       ))}
                     </AnimatePresence>
                     {colLeads.length === 0 && (

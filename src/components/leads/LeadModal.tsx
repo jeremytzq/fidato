@@ -12,6 +12,8 @@ import { cn } from '@/utils/cn'
 import { toTitleCase, formatCurrency } from '@/utils/format'
 import { scheduleCadence } from '@/lib/cadence'
 import { FollowUpCadence } from './FollowUpCadence'
+import { getAutomationSettings, addDays, dateOnly } from '@/lib/automations'
+import type { AutomationSettings } from '@/types'
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Negotiating', 'Won', 'Lost']
 const SOURCES: LeadSource[] = ['Cold Call', 'Doorknock', 'Flyers / Mailers', 'Google PPC', 'Meta Ads', 'Referral', 'Roadshow', 'Walk-in', 'Website', 'Other']
@@ -59,11 +61,13 @@ interface LeadModalProps {
   defaultStatus?: LeadStatus
   userId: string
   onSaved: () => void
+  initialMode?: 'view' | 'edit'
 }
 
-export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, onSaved }: LeadModalProps) {
+export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, onSaved, initialMode }: LeadModalProps) {
   const supabase = createClient()
   const [mode, setMode] = useState<'view' | 'edit'>('view')
+  const [automation, setAutomation] = useState<AutomationSettings | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -85,7 +89,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
   useEffect(() => {
     setSaveError(null)
     setConfirmDelete(false)
-    setMode(lead ? 'view' : 'edit')
+    setMode(initialMode ?? (lead ? 'view' : 'edit'))
     if (lead) {
       setForm({
         name: lead.name,
@@ -110,7 +114,12 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
     } else {
       setForm({ name: '', display_name: '', email: '', phone: '', whatsapp_number: '', status: defaultStatus, source: '', property_type: [], budget: '', client_type: '', project_interested: '', birthday: '', property_address: '', correspondence_address: '', notes: '', follow_up_date: '', grade: '', reminder_at: '' })
     }
-  }, [lead, defaultStatus, open])
+  }, [lead, defaultStatus, open, initialMode])
+
+  useEffect(() => {
+    if (!open) return
+    getAutomationSettings(userId).then(setAutomation)
+  }, [open, userId])
 
   useEffect(() => {
     if (!lead?.id) { setActivities([]); return }
@@ -172,6 +181,17 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
       if (error) { setSaveError(error.message); return }
       setMode('view')
     } else {
+      if (automation) {
+        if (automation.auto_set_deal_value && !payload.budget && automation.default_deal_value) {
+          payload.budget = automation.default_deal_value
+        }
+        if (automation.auto_set_due_date && !payload.follow_up_date) {
+          payload.follow_up_date = dateOnly(addDays(automation.due_date_days_offset))
+        }
+        if (automation.auto_reminder && !payload.reminder_at) {
+          payload.reminder_at = addDays(automation.reminder_days_offset).toISOString()
+        }
+      }
       const { data: newLead, error } = await supabase
         .from('leads')
         .insert({ ...payload, created_at: new Date().toISOString() })

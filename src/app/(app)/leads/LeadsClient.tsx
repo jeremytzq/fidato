@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { KanbanBoard } from '@/components/leads/KanbanBoard'
@@ -8,7 +8,8 @@ import { LeadModal } from '@/components/leads/LeadModal'
 import { ImportLeadsModal } from '@/components/leads/ImportLeadsModal'
 import { WonConversionModal } from '@/components/leads/WonConversionModal'
 import { Button } from '@/components/ui/Button'
-import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink, Search, X, Copy, CheckCircle2, Trash2, Upload } from 'lucide-react'
+import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink, Search, X, Copy, CheckCircle2, Trash2, Upload, Keyboard } from 'lucide-react'
+import { Modal } from '@/components/ui/Modal'
 import type { Lead, LeadStatus, LeadGrade, ClientType, PropertyType } from '@/types'
 import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
 import { cn } from '@/utils/cn'
@@ -353,6 +354,9 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [syncError, setSyncError] = useState<string | null>(null)
   const [dupesOpen, setDupesOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [forceEditMode, setForceEditMode] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const hoveredLeadIdRef = useRef<string | null>(null)
 
   // Search & filter state
   const [search, setSearch] = useState('')
@@ -392,10 +396,51 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
     setModalOpen(true)
   }
 
-  const openEdit = (lead: Lead) => {
+  const openEdit = (lead: Lead, startInEdit = false) => {
     setEditingLead(lead)
+    setForceEditMode(startInEdit)
     setModalOpen(true)
   }
+
+  const quickSetReminder = async (lead: Lead) => {
+    const supabase = createClient()
+    const tomorrow9am = new Date()
+    tomorrow9am.setDate(tomorrow9am.getDate() + 1)
+    tomorrow9am.setHours(9, 0, 0, 0)
+    await supabase.from('leads').update({ reminder_at: tomorrow9am.toISOString(), updated_at: new Date().toISOString() }).eq('id', lead.id)
+    handleSaved()
+  }
+
+  const openWhatsAppForLead = (lead: Lead) => {
+    if (!lead.phone) return
+    logActivity(userId, lead.id, 'Sent WhatsApp message')
+    window.open(`https://wa.me/65${lead.phone.replace(/\D/g, '')}`, '_blank')
+  }
+
+  // Keyboard shortcuts — hover a lead card on the Kanban and press a key
+  useEffect(() => {
+    const isTypingTarget = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false
+      return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable
+    }
+    const handler = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target) || modalOpen || dupesOpen || importOpen) return
+      const key = e.key.toLowerCase()
+      if (key === '?') { e.preventDefault(); setShortcutsOpen(true); return }
+      if (key === 'd') { e.preventDefault(); openAdd(); return }
+
+      const hoveredId = hoveredLeadIdRef.current
+      const lead = hoveredId ? initialLeads.find(l => l.id === hoveredId) : null
+      if (!lead) return
+
+      if (key === 'e') { e.preventDefault(); openEdit(lead, true) }
+      else if (key === 'a') { e.preventDefault(); openEdit(lead) }
+      else if (key === 'r') { e.preventDefault(); quickSetReminder(lead) }
+      else if (key === 'c') { e.preventDefault(); openWhatsAppForLead(lead) }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [initialLeads, modalOpen, dupesOpen, importOpen, userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSaved = () => startTransition(() => router.refresh())
 
@@ -456,6 +501,13 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <Upload size={14} /> <span className="hidden sm:inline">Import</span>
+          </button>
+          <button
+            onClick={() => setShortcutsOpen(true)}
+            title="Keyboard shortcuts"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Keyboard size={14} />
           </button>
           <Button onClick={() => openAdd()}>
             <Plus size={15} /> Add Lead
@@ -573,6 +625,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
           onEdit={openEdit}
           onAddLead={openAdd}
           onWon={setWonLead}
+          onHoverLead={id => { hoveredLeadIdRef.current = id }}
         />
       </div>
 
@@ -583,6 +636,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
         defaultStatus={defaultStatus}
         userId={userId}
         onSaved={handleSaved}
+        initialMode={forceEditMode ? 'edit' : undefined}
       />
 
       {wonLead && (
@@ -610,6 +664,31 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
           onImported={handleSaved}
         />
       )}
+
+      <Modal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} title="Keyboard Shortcuts" size="sm">
+        <p className="text-sm text-muted-foreground mb-4">
+          Hover over a lead card on the Kanban and press a key to quickly perform actions.
+        </p>
+        <div className="space-y-1">
+          {[
+            { key: 'D', label: 'Create a new lead', hint: '(works anywhere on Leads page)' },
+            { key: 'E', label: 'Edit lead', hint: '(hover card)' },
+            { key: 'R', label: 'Set reminder for tomorrow 9am', hint: '(hover card)' },
+            { key: 'A', label: 'Activity / Overview', hint: '(hover card)' },
+            { key: 'C', label: 'Open WhatsApp chat', hint: '(hover card)' },
+          ].map(s => (
+            <div key={s.key} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+              <div>
+                <span className="text-sm text-foreground">{s.label}</span>{' '}
+                <span className="text-xs text-muted-foreground">{s.hint}</span>
+              </div>
+              <kbd className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-muted text-xs font-bold text-foreground border border-border">
+                {s.key}
+              </kbd>
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
 }
