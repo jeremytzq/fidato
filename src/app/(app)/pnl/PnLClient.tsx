@@ -306,8 +306,8 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
         </Card>
       </div>
 
-      {/* Add Income modal */}
-      <Modal open={addModal === 'income'} onClose={() => { setAddModal(null); setSaveError(null) }} title="Add Income">
+      {/* Add / Edit Income modal */}
+      <Modal open={addModal === 'income'} onClose={() => { setAddModal(null); setEditTarget(null); setSaveError(null) }} title={editTarget?.kind === 'income' ? 'Edit Income' : 'Add Income'}>
         <div className="space-y-4">
           <Select label="Category" value={incomeForm.category} onChange={e => setIncomeForm(f => ({ ...f, category: e.target.value as IncomeCategory }))}>
             {INCOME_CATS.map(c => <option key={c} value={c}>{c}</option>)}
@@ -319,14 +319,14 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
           <Input label="Description" value={incomeForm.description} onChange={e => setIncomeForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" />
           {saveError && <p className="text-xs text-red-500 bg-red-500/10 rounded-lg px-3 py-2">{saveError}</p>}
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setAddModal(null)}>Cancel</Button>
-            <Button onClick={saveIncome} loading={saving}>Add Income</Button>
+            <Button variant="secondary" onClick={() => { setAddModal(null); setEditTarget(null); setSaveError(null) }}>Cancel</Button>
+            <Button onClick={saveIncome} loading={saving}>{editTarget?.kind === 'income' ? 'Save Changes' : 'Add Income'}</Button>
           </div>
         </div>
       </Modal>
 
-      {/* Add Expense modal */}
-      <Modal open={addModal === 'expense'} onClose={() => { setAddModal(null); setSaveError(null) }} title="Add Expense">
+      {/* Add / Edit Expense modal */}
+      <Modal open={addModal === 'expense'} onClose={() => { setAddModal(null); setEditTarget(null); setSaveError(null) }} title={editTarget?.kind === 'expense' ? 'Edit Expense' : 'Add Expense'}>
         <div className="space-y-4">
           <Select label="Category" value={expenseForm.category} onChange={e => setExpenseForm(f => ({ ...f, category: e.target.value as ExpenseCategory }))}>
             {EXPENSE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
@@ -338,8 +338,20 @@ export default function PnLClient({ initialIncomes, initialExpenses, userId }: {
           <Input label="Description" value={expenseForm.description} onChange={e => setExpenseForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" />
           {saveError && <p className="text-xs text-red-500 bg-red-500/10 rounded-lg px-3 py-2">{saveError}</p>}
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setAddModal(null)}>Cancel</Button>
-            <Button onClick={saveExpense} loading={saving}>Add Expense</Button>
+            <Button variant="secondary" onClick={() => { setAddModal(null); setEditTarget(null); setSaveError(null) }}>Cancel</Button>
+            <Button onClick={saveExpense} loading={saving}>{editTarget?.kind === 'expense' ? 'Save Changes' : 'Add Expense'}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete confirm modal */}
+      <Modal open={!!deleteTarget} onClose={() => { setDeleteTarget(null); setSaveError(null) }} title="Confirm Delete">
+        <div className="space-y-4">
+          <p className="text-sm text-foreground">Delete this <span className="font-semibold">{deleteTarget?.kind}</span> entry: <span className="font-semibold">{deleteTarget?.label}</span>? This cannot be undone and will immediately update your P&amp;L totals.</p>
+          {saveError && <p className="text-xs text-red-500 bg-red-500/10 rounded-lg px-3 py-2">{saveError}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete} loading={deleting}><Trash2 size={14} /> Delete</Button>
           </div>
         </div>
       </Modal>
