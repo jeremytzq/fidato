@@ -15,10 +15,20 @@ function getSupabase() {
 export async function generateMetadata({ params }: { params: { token: string } }): Promise<Metadata> {
   const supabase = getSupabase()
   const { data } = await supabase
-    .from('share_links').select('title, message').eq('token', params.token).maybeSingle()
+    .from('share_links').select('title, message, user_id').eq('token', params.token).maybeSingle()
+
+  let agentName = 'Jeremy Tan'
+  let agencyName = 'PropNex Realty'
+  if (data?.user_id) {
+    const { data: profile } = await supabase
+      .from('profiles').select('display_name, agency_name').eq('user_id', data.user_id).maybeSingle()
+    agentName = profile?.display_name || agentName
+    agencyName = profile?.agency_name || agencyName
+  }
+
   return {
-    title: data?.title || 'Jeremy Tan Real Estate',
-    description: data?.message?.slice(0, 160) || 'Shared by Jeremy Tan, PropNex Realty.',
+    title: data?.title || `${agentName} Real Estate`,
+    description: data?.message?.slice(0, 160) || `Shared by ${agentName}, ${agencyName}.`,
   }
 }
 
@@ -28,6 +38,15 @@ export default async function SharePage({ params }: { params: { token: string } 
     .from('share_links').select('*').eq('token', params.token).maybeSingle()
 
   if (!link) notFound()
+
+  const { data: profile } = await supabase
+    .from('profiles').select('*').eq('user_id', link.user_id).maybeSingle()
+
+  const agentName = profile?.display_name || 'Jeremy Tan'
+  const agencyName = profile?.agency_name || 'PropNex Realty'
+  const ceaRegNo = profile?.cea_reg_no
+  const whatsappNumber = profile?.whatsapp_number || '6590039987'
+  const agentInitial = agentName.trim().charAt(0).toUpperCase() || 'J'
 
   // Log the view
   const hdrs = headers()
@@ -45,7 +64,7 @@ export default async function SharePage({ params }: { params: { token: string } 
         <div className="text-center">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-600 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
-            Jeremy Tan · PropNex Realty
+            {agentName} · {agencyName}
           </span>
         </div>
 
@@ -70,14 +89,16 @@ export default async function SharePage({ params }: { params: { token: string } 
         {/* Agent contact card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
-            J
+            {agentInitial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 text-sm">Jeremy Tan</p>
-            <p className="text-xs text-gray-500">PropNex Realty · CEA Reg No.</p>
+            <p className="font-semibold text-gray-900 text-sm">{agentName}</p>
+            <p className="text-xs text-gray-500">
+              {agencyName}{ceaRegNo ? ` · CEA Reg No. ${ceaRegNo}` : ''}
+            </p>
           </div>
           <a
-            href="https://wa.me/6590039987"
+            href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`}
             className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors"
             style={{ background: '#25D366' }}
           >

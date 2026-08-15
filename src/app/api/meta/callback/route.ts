@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyOAuthState } from '@/lib/metaState'
 import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -6,12 +7,14 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
-  const userId = searchParams.get('state')
+  const state = searchParams.get('state')
   const error = searchParams.get('error')
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://fidatolabs.vercel.app'
 
-  if (error || !code || !userId) {
+  const userId = state ? verifyOAuthState(state) : null
+
+  if (error || !code || !state || !userId) {
     return Response.redirect(`${appUrl}/settings?error=meta_denied`)
   }
 
@@ -42,7 +45,7 @@ export async function GET(request: NextRequest) {
   if (!pagesRes.ok) return Response.redirect(`${appUrl}/settings?error=meta_pages`)
   const { data: pages } = await pagesRes.json()
 
-  console.log('meta callback pages:', JSON.stringify(pages))
+  console.log('meta callback pages:', pages.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })))
   if (!pages?.length) return Response.redirect(`${appUrl}/settings?error=meta_no_pages`)
 
   const supabase = createAdminClient()

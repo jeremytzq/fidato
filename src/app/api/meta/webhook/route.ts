@@ -1,5 +1,5 @@
-import { createHmac } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyMetaSignature, parseLeadFields } from '@/lib/metaWebhook'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,15 +20,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const rawBody = await request.text()
 
-  const sig = request.headers.get('x-hub-signature-256')?.replace('sha256=', '')
-  if (!sig || !process.env.META_APP_SECRET) {
+  if (!verifyMetaSignature(rawBody, request.headers.get('x-hub-signature-256'), process.env.META_APP_SECRET)) {
     return new Response('Unauthorized', { status: 401 })
-  }
-  const expected = createHmac('sha256', process.env.META_APP_SECRET)
-    .update(rawBody)
-    .digest('hex')
-  if (sig !== expected) {
-    return new Response('Invalid signature', { status: 401 })
   }
 
   const body = JSON.parse(rawBody)
@@ -65,40 +58,21 @@ async function handleLead(leadgenId: string, pageId: string) {
   if (!res.ok) return
   const data = await res.json()
 
-  const fields: Record<string, string> = {}
-  for (const f of data.field_data ?? []) {
-    fields[f.name] = f.values?.[0] ?? ''
-  }
+  const { name, phone, email, notes } = parseLeadFields(data.field_data ?? [])
 
-  const name =
-    fields['full_name'] ||
-    [fields['first_name'], fields['last_name']].filter(Boolean).join(' ') ||
-    'Unknown'
-
-  const phone = fields['phone_number'] || fields['phone'] || null
-  const email = fields['email'] || null
-
-  await supabase.from('leads').insert({
+  // Meta redelivers the same leadgen_id on retries — dedupe on (user_id, meta_leadgen_id)
+  // and keep the existing row rather than clobber status/notes the agent may have edited since.
+  await supabase.from('leads').upsert({
     user_id: conn.user_id,
+    meta_leadgen_id: leadgenId,
     name,
     phone,
     whatsapp_number: phone,
     email,
     status: 'New',
     source: 'Meta Ads',
-    notes: buildNotes(fields),
+    notes,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  })
-}
-
-function buildNotes(fields: Record<string, string>): string | null {
-  const standard = new Set([
-    'full_name', 'first_name', 'last_name',
-    'phone_number', 'phone', 'email',
-  ])
-  const extras = Object.entries(fields)
-    .filter(([k]) => !standard.has(k))
-    .map(([k, v]) => `${k}: ${v}`)
-  return extras.length > 0 ? `[Meta Ad] ${extras.join(' | ')}` : '[Meta Ad]'
+  }, { onConflict: 'user_id,meta_leadgen_id', ignoreDuplicates: true })
 }

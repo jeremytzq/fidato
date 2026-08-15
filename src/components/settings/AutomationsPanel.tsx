@@ -43,7 +43,7 @@ function Row({
 }) {
   return (
     <div className="border border-border rounded-xl p-4 bg-card space-y-3">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
             {icon}

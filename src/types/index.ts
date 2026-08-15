@@ -30,6 +30,7 @@ export interface Lead {
   notes: string | null
   follow_up_date: string | null
   reminder_at: string | null
+  meta_leadgen_id: string | null
   created_at: string
   updated_at: string
 }
@@ -166,6 +167,16 @@ export interface ShareLinkView {
   viewed_at: string
   user_agent: string | null
   ip_address: string | null
+}
+
+export interface Profile {
+  user_id: string
+  display_name: string
+  agency_name: string
+  cea_reg_no: string | null
+  whatsapp_number: string | null
+  created_at: string
+  updated_at: string
 }
 
 export type CadenceChannel = 'call' | 'voicemail' | 'whatsapp'
