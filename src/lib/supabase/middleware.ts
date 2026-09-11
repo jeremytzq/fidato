@@ -23,11 +23,34 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
-
   const { pathname } = request.nextUrl
+  const isAuthRoute = pathname === '/login' || pathname.startsWith('/auth')
 
-  if (!user && pathname !== '/login' && !pathname.startsWith('/auth')) {
+  // supabase.auth.getUser() is the only network call in middleware. If the
+  // Supabase project is slow/unreachable (e.g. an auto-paused free-tier
+  // project), this call can hang until Vercel kills the entire middleware
+  // invocation with MIDDLEWARE_INVOCATION_TIMEOUT. Race it against a hard
+  // timeout so we fail toward /login instead of hanging the whole request.
+  let user = null
+  try {
+    const { data } = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('auth_check_timeout')), 8000)
+      ),
+    ])
+    user = data.user
+  } catch {
+    if (!isAuthRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('error', 'auth_unavailable')
+      return NextResponse.redirect(url)
+    }
+    return supabaseResponse
+  }
+
+  if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
