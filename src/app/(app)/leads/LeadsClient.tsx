@@ -3,12 +3,12 @@
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { KanbanBoard } from '@/components/leads/KanbanBoard'
+import { KanbanBoard, type CardDensity } from '@/components/leads/KanbanBoard'
 import { LeadModal } from '@/components/leads/LeadModal'
 import { ImportLeadsModal } from '@/components/leads/ImportLeadsModal'
 import { WonConversionModal } from '@/components/leads/WonConversionModal'
 import { Button } from '@/components/ui/Button'
-import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink, Search, X, Copy, CheckCircle2, Trash2, Upload, Keyboard } from 'lucide-react'
+import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink, Search, X, Copy, CheckCircle2, Trash2, Upload, Keyboard, Rows3, AlignJustify } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import type { Lead, LeadStatus, LeadGrade, ClientType, PropertyType } from '@/types'
 import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
@@ -16,6 +16,8 @@ import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
 import { pushLeadsToGoogleSheets } from '@/lib/googleSheets'
 import { createClient } from '@/lib/supabase/client'
+
+const DENSITY_STORAGE_KEY = 'fidato:lead-card-density'
 
 const STATUSES: { id: LeadStatus; label: string; color: string }[] = [
   { id: 'New',         label: 'New',         color: 'hsl(235, 75%, 60%)' },
@@ -356,7 +358,23 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   const [importOpen, setImportOpen] = useState(false)
   const [forceEditMode, setForceEditMode] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [density, setDensity] = useState<CardDensity>('comfortable')
   const hoveredLeadIdRef = useRef<string | null>(null)
+
+  // Restore saved card density preference (per browser)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DENSITY_STORAGE_KEY)
+      if (saved === 'compact' || saved === 'comfortable') setDensity(saved)
+    } catch {
+      // localStorage unavailable — fall back to default density silently
+    }
+  }, [])
+
+  const changeDensity = (d: CardDensity) => {
+    setDensity(d)
+    try { localStorage.setItem(DENSITY_STORAGE_KEY, d) } catch {}
+  }
 
   // Search & filter state
   const [search, setSearch] = useState('')
@@ -480,6 +498,28 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5">
+            <button
+              onClick={() => changeDensity('comfortable')}
+              title="Comfortable cards"
+              className={cn(
+                'p-1.5 rounded-md transition-colors',
+                density === 'comfortable' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Rows3 size={14} />
+            </button>
+            <button
+              onClick={() => changeDensity('compact')}
+              title="Compact cards"
+              className={cn(
+                'p-1.5 rounded-md transition-colors',
+                density === 'compact' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <AlignJustify size={14} />
+            </button>
+          </div>
           <button
             onClick={handleSync}
             disabled={syncing}
@@ -626,6 +666,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
           onAddLead={openAdd}
           onWon={setWonLead}
           onHoverLead={id => { hoveredLeadIdRef.current = id }}
+          density={density}
         />
       </div>
 
