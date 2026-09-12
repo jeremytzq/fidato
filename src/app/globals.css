@@ -39,17 +39,26 @@
     --radius: 0.75rem;
   }
 
-  * { @apply border-border; box-sizing: border-box; }
+  * { @apply border-border; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
   body {
     @apply bg-background text-foreground antialiased;
     overflow-x: hidden;
+    overscroll-behavior-y: contain;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3 { letter-spacing: -0.025em; }
+
+  /* Below 16px, iOS Safari auto-zooms the page on focus and un-zooms on
+     blur — the app's fluid type scale tops out at 15px, so every input
+     was tripping this. Overriding needs !important since Tailwind's
+     text-* utility classes on these elements otherwise win on specificity. */
+  input, select, textarea { font-size: max(16px, 1rem) !important; }
+
+  button, a, [role='button'] { touch-action: manipulation; }
 
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
