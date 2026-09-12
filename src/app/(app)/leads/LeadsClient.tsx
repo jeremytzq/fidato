@@ -36,7 +36,68 @@ const GRADE_STYLES: Record<string, string> = {
 
 const SELECT_CLS = 'h-9 rounded-lg border border-border bg-card px-3 pr-7 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none cursor-pointer max-w-[8rem] sm:max-w-none'
 
-function MobileLeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; onEdit: (l: Lead) => void }) {
+function MobileLeadCard({ lead, userId, onEdit, density = 'comfortable' }: {
+  lead: Lead
+  userId: string
+  onEdit: (l: Lead) => void
+  density?: CardDensity
+}) {
+  if (density === 'compact') {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+        className="bg-card border border-border rounded-lg pl-2.5 pr-1.5 py-1.5 flex items-center gap-2"
+      >
+        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary flex-shrink-0">
+          {lead.name[0].toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground truncate">{toTitleCase(lead.name)}</p>
+          {lead.budget && (
+            <p className="text-xs text-muted-foreground truncate">{formatCurrency(lead.budget)}</p>
+          )}
+        </div>
+        {lead.grade && (
+          <span className={cn('text-[10px] font-bold px-1 py-0.5 rounded flex-shrink-0', GRADE_STYLES[lead.grade])}>
+            {lead.grade}
+          </span>
+        )}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {lead.phone && (
+            <a
+              href={`tel:${lead.phone}`}
+              onClick={() => logActivity(userId, lead.id, 'Called')}
+              className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+            >
+              <Phone size={15} />
+            </a>
+          )}
+          {lead.phone && (
+            <a
+              href={`https://wa.me/65${lead.phone.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => logActivity(userId, lead.id, 'Sent WhatsApp message')}
+              className="p-2 rounded-lg hover:bg-green-100 transition-colors text-green-700"
+            >
+              <MessageCircle size={15} />
+            </a>
+          )}
+          <button
+            onClick={() => onEdit(lead)}
+            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+          >
+            <MoreHorizontal size={15} />
+          </button>
+        </div>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div
       layout
@@ -118,11 +179,12 @@ function MobileLeadCard({ lead, userId, onEdit }: { lead: Lead; userId: string; 
   )
 }
 
-function MobileLeadView({ leads, userId, onEdit, onAddLead }: {
+function MobileLeadView({ leads, userId, onEdit, onAddLead, density = 'comfortable' }: {
   leads: Lead[]
   userId: string
   onEdit: (l: Lead) => void
   onAddLead: (status: LeadStatus) => void
+  density?: CardDensity
 }) {
   const [activeStatus, setActiveStatus] = useState<LeadStatus>('New')
   const filtered = leads.filter(l => l.status === activeStatus)
@@ -161,10 +223,10 @@ function MobileLeadView({ leads, userId, onEdit, onAddLead }: {
       </div>
 
       {/* Lead list */}
-      <div className="flex-1 overflow-y-auto mt-3 space-y-3 pb-2">
+      <div className={cn('flex-1 overflow-y-auto mt-3 pb-2', density === 'compact' ? 'space-y-1.5' : 'space-y-3')}>
         <AnimatePresence mode="popLayout">
           {filtered.map(lead => (
-            <MobileLeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} />
+            <MobileLeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} density={density} />
           ))}
         </AnimatePresence>
 
@@ -488,7 +550,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   return (
     <div className="p-4 sm:p-6 flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Leads</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -498,7 +560,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5">
+          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5">
             <button
               onClick={() => changeDensity('comfortable')}
               title="Comfortable cards"
@@ -653,6 +715,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
           userId={userId}
           onEdit={openEdit}
           onAddLead={openAdd}
+          density={density}
         />
       </div>
 
