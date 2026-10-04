@@ -5,36 +5,20 @@ import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useS
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, MessageCircle, Plus, MoreHorizontal, Calendar, Bell } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import type { Lead, LeadStatus, AutomationSettings } from '@/types'
-import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
+import { toTitleCase } from '@/utils/format'
 import { createClient } from '@/lib/supabase/client'
 import { logActivity } from '@/lib/activity'
 import { getAutomationSettings } from '@/lib/automations'
 import { cn } from '@/utils/cn'
+import { LeadCardContent, LEAD_STATUSES, Pill, type CardDensity } from './LeadCardContent'
 
-export type CardDensity = 'comfortable' | 'compact'
-
-const COLUMNS: { id: LeadStatus; label: string; color: string; bg: string; badge: string }[] = [
-  { id: 'New',         label: 'New',         color: 'hsl(235,75%,60%)',  bg: 'hsla(235,75%,60%,0.07)',  badge: 'hsla(235,75%,60%,0.15)' },
-  { id: 'Contacted',  label: 'Contacted',   color: 'hsl(280,65%,60%)',  bg: 'hsla(280,65%,60%,0.07)',  badge: 'hsla(280,65%,60%,0.15)' },
-  { id: 'Qualified',  label: 'Qualified',   color: 'hsl(38,92%,50%)',   bg: 'hsla(38,92%,50%,0.07)',   badge: 'hsla(38,92%,50%,0.18)'  },
-  { id: 'Negotiating',label: 'Negotiating', color: 'hsl(25,95%,53%)',   bg: 'hsla(25,95%,53%,0.07)',   badge: 'hsla(25,95%,53%,0.16)'  },
-  { id: 'Won',        label: 'Won',         color: 'hsl(142,71%,45%)',  bg: 'hsla(142,71%,45%,0.07)',  badge: 'hsla(142,71%,45%,0.15)' },
-  { id: 'Lost',       label: 'Lost',        color: 'hsl(0,84%,60%)',    bg: 'hsla(0,84%,60%,0.07)',    badge: 'hsla(0,84%,60%,0.15)'   },
-]
-
-const GRADE_STYLES = {
-  A: 'bg-red-50 text-red-600 border border-red-200',
-  B: 'bg-amber-50 text-amber-600 border border-amber-200',
-  C: 'bg-blue-50 text-blue-600 border border-blue-200',
-}
+export type { CardDensity }
 
 // Registers the column body as a drop target so empty columns accept drops
-function DroppableColumnBody({ colId, leads, density = 'comfortable', children }: {
+function DroppableColumnBody({ colId, density = 'comfortable', children }: {
   colId: LeadStatus
-  leads: Lead[]
   density?: CardDensity
   children: React.ReactNode
 }) {
@@ -43,11 +27,10 @@ function DroppableColumnBody({ colId, leads, density = 'comfortable', children }
     <div
       ref={setNodeRef}
       className={cn(
-        density === 'compact' ? 'space-y-1.5' : 'space-y-3',
-        'min-h-24 rounded-xl p-2 transition-colors',
-        isOver && 'ring-2 ring-primary/30 bg-primary/5'
+        density === 'compact' ? 'space-y-1.5' : 'space-y-2.5',
+        'min-h-24 rounded-lg p-0.5 transition-colors',
+        isOver && 'bg-primary/5 ring-1 ring-primary/30'
       )}
-      style={{ background: leads.length === 0 && !isOver ? 'hsl(var(--muted) / 0.4)' : undefined }}
     >
       {children}
     </div>
@@ -69,162 +52,17 @@ function LeadCard({ lead, userId, onEdit, onHoverChange, density = 'comfortable'
     opacity: isDragging ? 0.4 : 1,
   }
 
-  const handleCall = () => logActivity(userId, lead.id, 'Called')
-  const handleWhatsApp = () => logActivity(userId, lead.id, 'Sent WhatsApp message')
-
-  if (density === 'compact') {
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        {...listeners}
-        onMouseEnter={() => onHoverChange?.(lead.id)}
-        onMouseLeave={() => onHoverChange?.(null)}
-      >
-        <motion.div
-          layout
-          whileHover={{ y: -2, boxShadow: '0 4px 14px rgba(0,0,0,0.10)' }}
-          transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-          className="bg-card border border-border rounded-lg pl-2.5 pr-1.5 py-1.5 cursor-grab active:cursor-grabbing flex items-center gap-2"
-        >
-          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-semibold text-primary flex-shrink-0">
-            {lead.name[0].toUpperCase()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-foreground truncate">{toTitleCase(lead.name)}</p>
-            {lead.budget && (
-              <p className="text-[11px] text-muted-foreground truncate">{formatCurrency(lead.budget)}</p>
-            )}
-          </div>
-          {lead.grade && (
-            <span className={cn('text-[10px] font-bold px-1 py-0.5 rounded flex-shrink-0', GRADE_STYLES[lead.grade])}>
-              {lead.grade}
-            </span>
-          )}
-          <div className="flex items-center gap-0.5 flex-shrink-0" onPointerDown={e => e.stopPropagation()}>
-            {lead.phone && (
-              <a
-                href={`tel:${lead.phone}`}
-                onClick={handleCall}
-                title="Call"
-                className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
-              >
-                <Phone size={12} />
-              </a>
-            )}
-            {lead.phone && (
-              <a
-                href={`https://wa.me/65${lead.phone.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleWhatsApp}
-                title="WhatsApp"
-                className="p-1 rounded hover:bg-green-100 transition-colors text-green-700"
-              >
-                <MessageCircle size={12} />
-              </a>
-            )}
-            <button
-              onClick={() => onEdit(lead)}
-              className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
-            >
-              <MoreHorizontal size={12} />
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    )
-  }
-
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
+      className="cursor-grab active:cursor-grabbing"
       onMouseEnter={() => onHoverChange?.(lead.id)}
       onMouseLeave={() => onHoverChange?.(null)}
     >
-      <motion.div
-        layout
-        whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.11)' }}
-        transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-        className="bg-card border border-border rounded-xl p-4 cursor-grab active:cursor-grabbing space-y-3"
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0">
-              {lead.name[0].toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">{toTitleCase(lead.name)}</p>
-              {lead.property_type && (
-                <p className="text-xs text-muted-foreground">{lead.property_type}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {lead.grade && (
-              <span className={cn('text-xs font-bold px-1.5 py-0.5 rounded-md', GRADE_STYLES[lead.grade])}>
-                {lead.grade}
-              </span>
-            )}
-            <button
-              onPointerDown={e => e.stopPropagation()}
-              onClick={() => onEdit(lead)}
-              className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
-            >
-              <MoreHorizontal size={14} />
-            </button>
-          </div>
-        </div>
-
-        {lead.budget && (
-          <p className="text-sm font-semibold text-foreground">{formatCurrency(lead.budget)}</p>
-        )}
-
-        {lead.follow_up_date && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Calendar size={11} />
-            Follow up: {formatDate(lead.follow_up_date)}
-          </div>
-        )}
-
-        {lead.reminder_at && (
-          <div className="flex items-center gap-1.5 text-xs text-amber-600">
-            <Bell size={11} />
-            Reminder: {formatDate(lead.reminder_at)}
-          </div>
-        )}
-
-        {lead.source && (
-          <p className="text-xs text-muted-foreground">Source: {lead.source}</p>
-        )}
-
-        <div className="flex gap-2 pt-1" onPointerDown={e => e.stopPropagation()}>
-          {lead.phone && (
-            <a
-              href={`tel:${lead.phone}`}
-              onClick={handleCall}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-            >
-              <Phone size={14} /> Call
-            </a>
-          )}
-          {lead.phone && (
-            <a
-              href={`https://wa.me/65${lead.phone.replace(/\D/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={handleWhatsApp}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
-            >
-              <MessageCircle size={14} /> WhatsApp
-            </a>
-          )}
-        </div>
-      </motion.div>
+      <LeadCardContent lead={lead} userId={userId} onEdit={onEdit} density={density} />
     </div>
   )
 }
@@ -263,7 +101,7 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon, on
     const activeLead = leads.find(l => l.id === active.id)
     const activeStatus = activeLead?.status
     // over.id is either a column ID (DroppableColumnBody) or a lead ID (another card)
-    const newStatus = (COLUMNS.find(c => c.id === over.id)?.id) ||
+    const newStatus = (LEAD_STATUSES.find(c => c.id === over.id)?.id) ||
       (leads.find(l => l.id === over.id)?.status)
 
     if (!newStatus || activeStatus === newStatus) return
@@ -298,29 +136,21 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon, on
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 h-full overflow-x-auto pb-4">
-        {COLUMNS.map(col => {
+      <div className="flex gap-5 h-full overflow-x-auto pb-4">
+        {LEAD_STATUSES.map(col => {
           const colLeads = leads.filter(l => l.status === col.id)
           return (
-            <div key={col.id} className="flex-shrink-0 w-64 flex flex-col h-full min-h-0">
+            <div key={col.id} className="flex-shrink-0 w-[250px] flex flex-col h-full min-h-0">
               {/* Column header — stays pinned while cards scroll below */}
-              <div
-                className="flex items-center justify-between mb-3 flex-shrink-0 px-3 py-2.5 rounded-xl"
-                style={{ background: col.bg, borderTop: `3px solid ${col.color}` }}
-              >
+              <div className="flex items-center justify-between mb-2 flex-shrink-0 h-7">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">{col.label}</span>
-                  <span
-                    className="text-xs font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: col.badge, color: col.color }}
-                  >
-                    {colLeads.length}
-                  </span>
+                  <Pill hue={col.hue} className="text-[12px] px-2">{col.label}</Pill>
+                  <span className="text-xs text-muted-foreground numeric">{colLeads.length}</span>
                 </div>
                 <button
                   onClick={() => onAddLead(col.id)}
-                  className="p-1 rounded-lg transition-colors hover:bg-white/40"
-                  style={{ color: col.color }}
+                  title={`Add ${col.label} lead`}
+                  className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 >
                   <Plus size={14} />
                 </button>
@@ -329,15 +159,10 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon, on
               {/* Scrollable column body */}
               <div className="flex-1 overflow-y-auto min-h-0 pb-2">
                 <SortableContext items={colLeads.map(l => l.id)} strategy={verticalListSortingStrategy}>
-                  <DroppableColumnBody colId={col.id} leads={colLeads} density={density}>
-                    <AnimatePresence>
-                      {colLeads.map(lead => (
-                        <LeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} onHoverChange={onHoverLead} density={density} />
-                      ))}
-                    </AnimatePresence>
-                    {colLeads.length === 0 && (
-                      <div className="text-center py-6 text-xs text-muted-foreground">Drop here</div>
-                    )}
+                  <DroppableColumnBody colId={col.id} density={density}>
+                    {colLeads.map(lead => (
+                      <LeadCard key={lead.id} lead={lead} userId={userId} onEdit={onEdit} onHoverChange={onHoverLead} density={density} />
+                    ))}
                   </DroppableColumnBody>
                 </SortableContext>
               </div>
@@ -348,9 +173,8 @@ export function KanbanBoard({ initialLeads, userId, onEdit, onAddLead, onWon, on
 
       <DragOverlay>
         {activeLead && (
-          <div className="bg-card border border-primary rounded-xl p-4 shadow-xl w-64 opacity-90">
-            <p className="text-sm font-semibold text-foreground">{toTitleCase(activeLead.name)}</p>
-            {activeLead.phone && <p className="text-xs text-muted-foreground mt-1">{activeLead.phone}</p>}
+          <div className="w-[250px] rotate-1 shadow-xl rounded-md cursor-grabbing">
+            <LeadCardContent lead={activeLead} userId={userId} onEdit={() => {}} density={density} actionsAlwaysVisible />
           </div>
         )}
       </DragOverlay>

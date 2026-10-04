@@ -4,14 +4,15 @@ import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { KanbanBoard, type CardDensity } from '@/components/leads/KanbanBoard'
+import { LeadCardContent, LEAD_STATUSES } from '@/components/leads/LeadCardContent'
 import { LeadModal } from '@/components/leads/LeadModal'
 import { ImportLeadsModal } from '@/components/leads/ImportLeadsModal'
 import { WonConversionModal } from '@/components/leads/WonConversionModal'
 import { Button } from '@/components/ui/Button'
-import { Plus, Phone, MessageCircle, Calendar, Bell, MoreHorizontal, FileSpreadsheet, ExternalLink, Search, X, Copy, CheckCircle2, Trash2, Upload, Keyboard, Rows3, AlignJustify } from 'lucide-react'
+import { Plus, Phone, FileSpreadsheet, ExternalLink, Search, X, Copy, CheckCircle2, Trash2, Upload, Keyboard, Rows3, AlignJustify, Columns3 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import type { Lead, LeadStatus, LeadGrade, ClientType, PropertyType } from '@/types'
-import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
+import { toTitleCase } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
 import { pushLeadsToGoogleSheets } from '@/lib/googleSheets'
@@ -19,14 +20,7 @@ import { createClient } from '@/lib/supabase/client'
 
 const DENSITY_STORAGE_KEY = 'fidato:lead-card-density'
 
-const STATUSES: { id: LeadStatus; label: string; color: string }[] = [
-  { id: 'New',         label: 'New',         color: 'hsl(235, 75%, 60%)' },
-  { id: 'Contacted',  label: 'Contacted',   color: 'hsl(280, 65%, 60%)' },
-  { id: 'Qualified',  label: 'Qualified',   color: 'hsl(38, 92%, 50%)' },
-  { id: 'Negotiating',label: 'Negotiating', color: 'hsl(25, 95%, 53%)' },
-  { id: 'Won',        label: 'Won',         color: 'hsl(142, 71%, 45%)' },
-  { id: 'Lost',       label: 'Lost',        color: 'hsl(0, 84%, 60%)' },
-]
+const STATUSES = LEAD_STATUSES.map(s => ({ id: s.id, label: s.label, color: `hsl(${s.hue} 70% 50%)` }))
 
 const GRADE_STYLES: Record<string, string> = {
   A: 'bg-red-50 text-red-600 border border-red-200',
@@ -34,7 +28,7 @@ const GRADE_STYLES: Record<string, string> = {
   C: 'bg-blue-50 text-blue-600 border border-blue-200',
 }
 
-const SELECT_CLS = 'h-9 rounded-lg border border-border bg-card px-3 pr-7 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none cursor-pointer max-w-[8rem] sm:max-w-none'
+const SELECT_CLS = 'h-8 rounded-md border border-border bg-card px-3 pr-7 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none cursor-pointer max-w-[8rem] sm:max-w-none'
 
 function MobileLeadCard({ lead, userId, onEdit, density = 'comfortable' }: {
   lead: Lead
@@ -42,139 +36,15 @@ function MobileLeadCard({ lead, userId, onEdit, density = 'comfortable' }: {
   onEdit: (l: Lead) => void
   density?: CardDensity
 }) {
-  if (density === 'compact') {
-    return (
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-        className="bg-card border border-border rounded-lg pl-2.5 pr-1.5 py-1.5 flex items-center gap-2"
-      >
-        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold text-primary flex-shrink-0">
-          {lead.name[0].toUpperCase()}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground truncate">{toTitleCase(lead.name)}</p>
-          {lead.budget && (
-            <p className="text-xs text-muted-foreground truncate">{formatCurrency(lead.budget)}</p>
-          )}
-        </div>
-        {lead.grade && (
-          <span className={cn('text-[10px] font-bold px-1 py-0.5 rounded flex-shrink-0', GRADE_STYLES[lead.grade])}>
-            {lead.grade}
-          </span>
-        )}
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          {lead.phone && (
-            <a
-              href={`tel:${lead.phone}`}
-              onClick={() => logActivity(userId, lead.id, 'Called')}
-              className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
-            >
-              <Phone size={15} />
-            </a>
-          )}
-          {lead.phone && (
-            <a
-              href={`https://wa.me/65${lead.phone.replace(/\D/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => logActivity(userId, lead.id, 'Sent WhatsApp message')}
-              className="p-2 rounded-lg hover:bg-green-100 transition-colors text-green-700"
-            >
-              <MessageCircle size={15} />
-            </a>
-          )}
-          <button
-            onClick={() => onEdit(lead)}
-            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
-          >
-            <MoreHorizontal size={15} />
-          </button>
-        </div>
-      </motion.div>
-    )
-  }
-
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      whileHover={{ y: -2, boxShadow: '0 6px 20px rgba(0,0,0,0.08)' }}
       transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-      className="bg-card border border-border rounded-xl p-4 space-y-3"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
-            {lead.name[0].toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{toTitleCase(lead.name)}</p>
-            {lead.property_type && (
-              <p className="text-xs text-muted-foreground">{lead.property_type.split(',').map(t => t.trim()).join(', ')}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {lead.grade && (
-            <span className={cn('text-xs font-bold px-1.5 py-0.5 rounded-md', GRADE_STYLES[lead.grade])}>
-              {lead.grade}
-            </span>
-          )}
-          <button
-            onClick={() => onEdit(lead)}
-            className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
-          >
-            <MoreHorizontal size={15} />
-          </button>
-        </div>
-      </div>
-
-      {lead.budget && (
-        <p className="text-sm font-semibold text-foreground">{formatCurrency(lead.budget)}</p>
-      )}
-
-      <div className="flex flex-wrap gap-x-3 gap-y-1">
-        {lead.follow_up_date && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar size={11} /> {formatDate(lead.follow_up_date)}
-          </div>
-        )}
-        {lead.reminder_at && (
-          <div className="flex items-center gap-1 text-xs text-amber-600">
-            <Bell size={11} /> {formatDate(lead.reminder_at)}
-          </div>
-        )}
-        {lead.source && (
-          <span className="text-xs text-muted-foreground">{lead.source}</span>
-        )}
-      </div>
-
-      {lead.phone && (
-        <div className="flex gap-2">
-          <a
-            href={`tel:${lead.phone}`}
-            onClick={() => logActivity(userId, lead.id, 'Called')}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-          >
-            <Phone size={13} /> Call
-          </a>
-          <a
-            href={`https://wa.me/65${lead.phone.replace(/\D/g, '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => logActivity(userId, lead.id, 'Sent WhatsApp message')}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
-          >
-            <MessageCircle size={13} /> WhatsApp
-          </a>
-        </div>
-      )}
+      <LeadCardContent lead={lead} userId={userId} onEdit={onEdit} density={density} actionsAlwaysVisible />
     </motion.div>
   )
 }
@@ -551,16 +421,16 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
     <div className="p-4 sm:p-6 flex flex-col h-full">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Leads</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+        <div className="flex items-baseline gap-2.5">
+          <h1 className="text-lg sm:text-xl font-semibold text-foreground">Leads</h1>
+          <span className="text-xs text-muted-foreground">
             {hasFilters
               ? `${filteredLeads.length} of ${initialLeads.length} shown`
               : `${initialLeads.length} in pipeline`}
-          </p>
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-card p-0.5">
+          <div className="flex items-center gap-0.5 rounded-md border border-border bg-card p-0.5">
             <button
               onClick={() => changeDensity('comfortable')}
               title="Comfortable cards"
@@ -586,28 +456,28 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
             onClick={handleSync}
             disabled={syncing}
             title="Sync with Google Sheets"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
           >
             <FileSpreadsheet size={14} className="text-green-600" />
             <span className="hidden sm:inline">{syncing ? 'Syncing…' : 'Sheets'}</span>
           </button>
           <button
             onClick={() => setDupesOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <Copy size={14} /> Find Duplicates
           </button>
           <button
             onClick={() => setImportOpen(true)}
             title="Import leads from CSV"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <Upload size={14} /> <span className="hidden sm:inline">Import</span>
           </button>
           <button
             onClick={() => setShortcutsOpen(true)}
             title="Keyboard shortcuts"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <Keyboard size={14} />
           </button>
@@ -617,17 +487,21 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
         </div>
       </div>
 
-      {/* Search + filter bar */}
+      {/* View tab + search/filter bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-muted text-xs font-medium text-foreground">
+          <Columns3 size={13} className="text-muted-foreground" /> Pipeline
+        </div>
+        <div className="flex flex-wrap items-center gap-2 md:ml-auto">
         {/* Search */}
-        <div className="relative flex-1 min-w-[160px] max-w-xs">
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search name, phone, email…"
-            className="w-full h-9 rounded-lg border border-border bg-card pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            placeholder="Search leads…"
+            className="w-full h-8 rounded-md border border-border bg-card pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -686,11 +560,12 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1 h-9 px-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors"
+            className="flex items-center gap-1 h-8 px-2.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors"
           >
             <X size={11} /> Clear
           </button>
         )}
+        </div>
       </div>
 
       {sheetUrl && (
