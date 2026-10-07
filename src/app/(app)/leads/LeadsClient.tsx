@@ -13,6 +13,7 @@ import { Plus, Phone, FileSpreadsheet, ExternalLink, Search, X, Copy, CheckCircl
 import { Modal } from '@/components/ui/Modal'
 import type { Lead, LeadStatus, LeadGrade, ClientType, PropertyType } from '@/types'
 import { toTitleCase } from '@/utils/format'
+import { whatsAppUrl } from '@/utils/whatsapp'
 import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
 import { pushLeadsToGoogleSheets } from '@/lib/googleSheets'
@@ -362,9 +363,10 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   }
 
   const openWhatsAppForLead = (lead: Lead) => {
-    if (!lead.phone) return
+    const href = whatsAppUrl(lead.whatsapp_number || lead.phone)
+    if (!href) return
     logActivity(userId, lead.id, 'Sent WhatsApp message')
-    window.open(`https://wa.me/65${lead.phone.replace(/\D/g, '')}`, '_blank')
+    window.open(href, '_blank')
   }
 
   // Keyboard shortcuts — hover a lead card on the Kanban and press a key

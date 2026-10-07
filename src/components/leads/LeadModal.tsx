@@ -10,6 +10,7 @@ import { Phone, MessageCircle, Mail, Pencil, Building2, Banknote, MapPin, Zap, C
 import type { Lead, LeadStatus, LeadSource, PropertyType, LeadGrade, ClientType, ActivityLog } from '@/types'
 import { cn } from '@/utils/cn'
 import { toTitleCase, formatCurrency } from '@/utils/format'
+import { whatsAppUrl } from '@/utils/whatsapp'
 import { scheduleCadence } from '@/lib/cadence'
 import { FollowUpCadence } from './FollowUpCadence'
 import { getAutomationSettings, addDays, dateOnly } from '@/lib/automations'
@@ -228,7 +229,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
     const statusCfg = STATUS_CONFIG[lead.status]
     const clientTypeCfg = CLIENT_TYPE_OPTIONS.find(o => o.value === lead.client_type)
     const gradeOpt = GRADE_OPTIONS.find(g => g.value === lead.grade)
-    const waNum = (lead.whatsapp_number || lead.phone)?.replace(/\D/g, '')
+    const waHref = whatsAppUrl(lead.whatsapp_number || lead.phone)
     const allActivities = [...activities, { id: 'added', action: 'Lead added', created_at: lead.created_at }]
 
     const fields = [
@@ -289,8 +290,8 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
                   <span className="text-[11px] text-muted-foreground font-medium">Call</span>
                 </a>
               )}
-              {waNum && (
-                <a href={`https://wa.me/65${waNum}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
+              {waHref && (
+                <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <MessageCircle size={18} />
                   </div>
