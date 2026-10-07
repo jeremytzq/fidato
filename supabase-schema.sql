@@ -12,8 +12,8 @@ create table if not exists leads (
   email text,
   phone text,
   status text not null default 'New' check (status in ('New','Contacted','Qualified','Negotiating','Won','Lost')),
-  source text check (source in ('Referral','Website','Social Media','Cold Call','Walk-in','Other')),
-  property_type text check (property_type in ('HDB','Condo','Landed','Commercial','Industrial','Other')),
+  source text,
+  property_type text, -- comma-separated multi-select, e.g. 'Condo,EC'; validated in the UI
   budget numeric,
   notes text,
   follow_up_date date,
@@ -28,7 +28,7 @@ create table if not exists clients (
   name text not null,
   email text,
   phone text,
-  property_type text check (property_type in ('HDB','Condo','Landed','Commercial','Industrial','Other')),
+  property_type text, -- comma-separated multi-select, e.g. 'Condo,EC'; validated in the UI
   notes text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
