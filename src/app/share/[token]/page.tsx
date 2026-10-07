@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import type { Metadata } from 'next'
+import { whatsAppUrl } from '@/utils/whatsapp'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,8 +18,8 @@ export async function generateMetadata({ params }: { params: { token: string } }
   const { data } = await supabase
     .from('share_links').select('title, message, user_id').eq('token', params.token).maybeSingle()
 
-  let agentName = 'Jeremy Tan'
-  let agencyName = 'PropNex Realty'
+  let agentName = 'Your Agent'
+  let agencyName = 'Real Estate'
   if (data?.user_id) {
     const { data: profile } = await supabase
       .from('profiles').select('display_name, agency_name').eq('user_id', data.user_id).maybeSingle()
@@ -42,11 +43,11 @@ export default async function SharePage({ params }: { params: { token: string } 
   const { data: profile } = await supabase
     .from('profiles').select('*').eq('user_id', link.user_id).maybeSingle()
 
-  const agentName = profile?.display_name || 'Jeremy Tan'
-  const agencyName = profile?.agency_name || 'PropNex Realty'
+  const agentName = profile?.display_name || 'Your Agent'
+  const agencyName = profile?.agency_name || 'Real Estate'
   const ceaRegNo = profile?.cea_reg_no
-  const whatsappNumber = profile?.whatsapp_number || '6590039987'
-  const agentInitial = agentName.trim().charAt(0).toUpperCase() || 'J'
+  const waHref = whatsAppUrl(profile?.whatsapp_number)
+  const agentInitial = agentName.trim().charAt(0).toUpperCase() || 'A'
 
   // Log the view
   const hdrs = headers()
@@ -97,13 +98,15 @@ export default async function SharePage({ params }: { params: { token: string } 
               {agencyName}{ceaRegNo ? ` · CEA Reg No. ${ceaRegNo}` : ''}
             </p>
           </div>
+          {waHref && (
           <a
-            href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`}
+            href={waHref}
             className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors"
             style={{ background: '#25D366' }}
           >
             WhatsApp
           </a>
+          )}
         </div>
 
         <p className="text-center text-[10px] text-gray-400">Powered by Fidato Labs</p>

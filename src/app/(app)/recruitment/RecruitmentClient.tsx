@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate, toTitleCase } from '@/utils/format'
+import { whatsAppUrl } from '@/utils/whatsapp'
 import { cn } from '@/utils/cn'
 import {
   Phone, MessageCircle, Mail, Pencil, Trash2,
@@ -337,7 +338,7 @@ function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
     const displayName = toTitleCase(recruit.name)
     const initial = displayName.charAt(0).toUpperCase()
     const cfg = STATUS_CFG[recruit.status]
-    const waNum = recruit.phone?.replace(/\D/g, '')
+    const waHref = whatsAppUrl(recruit.phone)
 
     const fields = [
       { label: 'Mobile',    value: recruit.phone,                                                         icon: <Phone size={14} /> },
@@ -375,8 +376,8 @@ function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
                   <span className="text-[11px] text-muted-foreground font-medium">Call</span>
                 </a>
               )}
-              {waNum && (
-                <a href={`https://wa.me/65${waNum}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
+              {waHref && (
+                <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <MessageCircle size={18} />
                   </div>
@@ -768,9 +769,9 @@ export default function RecruitmentClient({
                     </td>
                     <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        {r.phone && (
+                        {whatsAppUrl(r.phone) && (
                           <a
-                            href={`https://wa.me/65${r.phone.replace(/\D/g, '')}`}
+                            href={whatsAppUrl(r.phone)!}
                             target="_blank" rel="noopener noreferrer"
                             title="WhatsApp"
                             className="p-1.5 rounded-lg hover:bg-green-50 text-muted-foreground hover:text-green-600 transition-colors"

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X, Search, MessageCircle, Copy, Check, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { whatsAppUrl } from '@/utils/whatsapp'
 import type { Lead } from '@/types'
 
 interface Template {
@@ -66,10 +67,9 @@ export function UseTemplateModal({ open, onClose, template, userId, senderName, 
   }
 
   const openWhatsApp = () => {
-    if (!phone) return
-    const num = phone.replace(/\D/g, '')
-    const prefix = num.startsWith('65') ? '' : '65'
-    window.open(`https://wa.me/${prefix}${num}?text=${encodeURIComponent(filled)}`, '_blank')
+    const href = whatsAppUrl(phone, filled)
+    if (!href) return
+    window.open(href, '_blank')
   }
 
   if (!open) return null

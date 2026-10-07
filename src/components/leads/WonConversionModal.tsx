@@ -33,7 +33,7 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
   useEffect(() => {
     if (!open) return
     setForm({
-      property_address: '',
+      property_address: lead.property_address || '',
       transaction_type: 'Sale',
       amount: lead.budget ? String(lead.budget) : '',
       commission_rate: '2',
@@ -48,6 +48,23 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
   const amt = parseInt(form.amount) || 0
   const rate = parseFloat(form.commission_rate) || 0
   const commissionAmount = amt && rate ? Math.round(amt * rate / 100) : 0
+
+  const clientPayload = {
+    user_id: userId,
+    name: lead.name,
+    display_name: lead.display_name,
+    email: lead.email,
+    phone: lead.phone,
+    whatsapp_number: lead.whatsapp_number,
+    property_type: lead.property_type,
+    budget: lead.budget,
+    project_interested: lead.project_interested,
+    birthday: lead.birthday,
+    property_address: lead.property_address,
+    correspondence_address: lead.correspondence_address,
+    client_type: lead.client_type,
+    notes: lead.notes,
+  }
 
   const handleConvert = async () => {
     if (!form.property_address.trim() || !form.amount) {
@@ -65,63 +82,46 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
     if (leadErr) { setSaving(false); setError(leadErr.message); return }
 
     // Check for existing client by phone to avoid duplicates
-    const normalizedPhone = lead.phone?.replace(/\D/g, '') || null
     let clientId: string
 
-    if (normalizedPhone) {
+    if (lead.phone) {
       const { data: existing } = await supabase
         .from('clients')
         .select('id')
         .eq('user_id', userId)
-        .eq('phone', lead.phone!)
+        .eq('phone', lead.phone)
         .maybeSingle()
 
       if (existing) {
         clientId = existing.id
+        await supabase.from('clients').update({ ...clientPayload, updated_at: now }).eq('id', existing.id)
       } else {
         const { data: newClient, error: clientErr } = await supabase
           .from('clients')
-          .insert({
-            user_id: userId,
-            name: lead.name,
-            email: lead.email,
-            phone: lead.phone,
-            property_type: lead.property_type,
-            notes: lead.notes,
-            created_at: now,
-            updated_at: now,
-          })
+          .insert({ ...clientPayload, created_at: now, updated_at: now })
           .select('id')
           .single()
         if (clientErr) { setSaving(false); setError(clientErr.message); return }
         clientId = newClient.id
       }
     } else {
-      // No phone — always create a new client
       const { data: newClient, error: clientErr } = await supabase
         .from('clients')
-        .insert({
-          user_id: userId,
-          name: lead.name,
-          email: lead.email,
-          phone: lead.phone,
-          property_type: lead.property_type,
-          notes: lead.notes,
-          created_at: now,
-          updated_at: now,
-        })
+        .insert({ ...clientPayload, created_at: now, updated_at: now })
         .select('id')
         .single()
       if (clientErr) { setSaving(false); setError(clientErr.message); return }
       clientId = newClient.id
     }
 
-    const { data: txData, error: txErr } = await supabase
+    // Create Active deal only — income is booked when the transaction is marked Completed
+    // (same rule as TransactionsClient) so P&L is not inflated early.
+    const { error: txErr } = await supabase
       .from('transactions')
       .insert({
         user_id: userId,
         client_id: clientId,
-        client_name: lead.name,
+        client_name: lead.display_name || lead.name,
         property_address: form.property_address.trim(),
         transaction_type: form.transaction_type,
         status: 'Active',
@@ -133,23 +133,7 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
         created_at: now,
         updated_at: now,
       })
-      .select('id')
-      .single()
     if (txErr) { setSaving(false); setError(txErr.message); return }
-
-    // Record commission in income table so P&L picks it up
-    if (commissionAmount > 0) {
-      const { error: incomeErr } = await supabase.from('income').insert({
-        user_id: userId,
-        transaction_id: txData.id,
-        category: 'Commission',
-        amount: commissionAmount,
-        description: `${lead.name} — ${form.property_address.trim()}`,
-        date: form.closing_date || now.slice(0, 10),
-        created_at: now,
-      })
-      if (incomeErr) { setSaving(false); setError(incomeErr.message); return }
-    }
 
     setSaving(false)
     onConverted()
@@ -165,7 +149,8 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
           {lead.phone && <p className="text-xs text-muted-foreground mt-0.5">{lead.phone}</p>}
         </div>
         <p className="text-xs text-muted-foreground">
-          Fill in the deal details — a client profile and transaction will be created automatically.
+          Fill in the deal details — a client profile and active transaction will be created.
+          Commission appears in P&amp;L when you mark the deal Completed.
         </p>
 
         <Input
@@ -208,6 +193,7 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
             <p className="text-xs text-green-700">
               Estimated commission:{' '}
               <span className="font-bold text-sm">SGD {commissionAmount.toLocaleString('en-SG')}</span>
+              <span className="block mt-0.5 text-green-600/80">Booked to P&amp;L when status is Completed.</span>
             </p>
           </div>
         )}

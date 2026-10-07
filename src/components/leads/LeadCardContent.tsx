@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import type { Lead, LeadStatus, LeadSource, ClientType, LeadGrade } from '@/types'
 import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
+import { whatsAppUrl } from '@/utils/whatsapp'
 import { logActivity } from '@/lib/activity'
 import { cn } from '@/utils/cn'
 
@@ -80,6 +81,7 @@ export function LeadCardContent({
 }) {
   const handleCall = () => logActivity(userId, lead.id, 'Called')
   const handleWhatsApp = () => logActivity(userId, lead.id, 'Sent WhatsApp message')
+  const waHref = whatsAppUrl(lead.whatsapp_number || lead.phone)
 
   const ip = actionsAlwaysVisible ? 'p-2.5' : 'p-1.5'
   const iz = actionsAlwaysVisible ? 16 : 13
@@ -106,9 +108,9 @@ export function LeadCardContent({
           <Phone size={iz} />
         </a>
       )}
-      {lead.phone && (
+      {waHref && (
         <a
-          href={`https://wa.me/65${lead.phone.replace(/\D/g, '')}`}
+          href={waHref}
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleWhatsApp}

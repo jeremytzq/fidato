@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Plus, Phone, MessageCircle, Mail, Pencil, Trash2, Search, FileSpreadsheet, ExternalLink, Building2, Banknote, MapPin, Cake, Home, Tag, Calendar } from 'lucide-react'
 import type { Client, PropertyType, ClientType } from '@/types'
 import { formatDate, toTitleCase, formatCurrency } from '@/utils/format'
+import { whatsAppUrl } from '@/utils/whatsapp'
 import { pushClientsToGoogleSheets } from '@/lib/googleSheets'
 import { cn } from '@/utils/cn'
 
@@ -129,7 +130,7 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
     const displayName = toTitleCase(client.display_name || client.name)
     const initial = displayName.charAt(0).toUpperCase()
     const clientTypeCfg = CLIENT_TYPE_OPTIONS.find(o => o.value === client.client_type)
-    const waNum = (client.whatsapp_number || client.phone)?.replace(/\D/g, '')
+    const waHref = whatsAppUrl(client.whatsapp_number || client.phone)
 
     const fields = [
       { label: 'Mobile',         value: client.phone,                                              icon: <Phone size={14} /> },
@@ -180,8 +181,8 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
                   <span className="text-[11px] text-muted-foreground font-medium">Call</span>
                 </a>
               )}
-              {waNum && (
-                <a href={`https://wa.me/65${waNum}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
+              {waHref && (
+                <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <MessageCircle size={18} />
                   </div>
@@ -491,8 +492,9 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
                           >
                             <Phone size={13} />
                           </a>
+                          {whatsAppUrl(c.whatsapp_number || c.phone) && (
                           <a
-                            href={`https://wa.me/65${c.phone.replace(/\D/g, '')}`}
+                            href={whatsAppUrl(c.whatsapp_number || c.phone)!}
                             target="_blank"
                             rel="noopener noreferrer"
                             title="WhatsApp"
@@ -500,6 +502,7 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
                           >
                             <MessageCircle size={13} />
                           </a>
+                          )}
                         </>
                       )}
                       <button

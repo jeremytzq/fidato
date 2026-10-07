@@ -2,10 +2,10 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 
 const DEFAULTS: Omit<Profile, 'user_id' | 'created_at' | 'updated_at'> = {
-  display_name: 'Jeremy Tan',
-  agency_name: 'PropNex Realty',
+  display_name: '',
+  agency_name: '',
   cea_reg_no: null,
-  whatsapp_number: '6590039987',
+  whatsapp_number: null,
 }
 
 export async function getProfile(userId: string): Promise<Profile> {

@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fidato Labs CRM
 
-## Getting Started
+Singapore real-estate CRM for solo agents — leads kanban, follow-up cadence, clients, transactions, P&L, Content Hub, recruitment, and Meta Lead Ads ingest.
 
-First, run the development server:
+## Stack
+
+- Next.js 14 (App Router) + TypeScript + Tailwind
+- Supabase (Auth, Postgres, RLS, Storage)
+- Google OAuth (optional Sheets sync)
+
+## Setup
+
+1. Copy env vars:
+
+```bash
+cp .env.local.example .env.local
+```
+
+2. Create a Supabase project and run SQL in the SQL Editor:
+
+- **Greenfield:** `supabase-schema.sql`
+- **Existing project** that already applied older migrations: `supabase_consolidate_migration.sql`
+
+3. Enable Google provider in Supabase Auth (and Sheets scope if you use Database → Sheets sync).
+
+4. Install and run:
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Meta Lead Ads (optional)
+
+Set `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`, and `META_STATE_SECRET` in `.env.local`. Point the Meta webhook to `/api/meta/webhook`, then connect Pages from **Settings → Meta Lead Ads**.
+
+## Scripts
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
+npm run lint
+npm test
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
