@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Phone, MessageCircle, Check } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import { telHref, whatsAppHref, type TodayQueueItem } from '@/lib/todayQueue'
@@ -135,6 +136,12 @@ export function TodayQueue({ items: initialItems, userId, readOnly = false }: To
                   {!call && !whatsApp && (
                     <span className="text-xs text-muted-foreground">No phone number on this lead</span>
                   )}
+                  <Link
+                    href={`/leads?lead=${item.leadId}`}
+                    className="inline-flex items-center h-9 px-3 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted"
+                  >
+                    Open
+                  </Link>
                 </div>
 
                 <div className="grid grid-cols-2 gap-1.5 mt-2 sm:flex sm:flex-wrap">

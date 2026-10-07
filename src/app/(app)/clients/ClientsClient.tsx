@@ -13,6 +13,9 @@ import { Plus, Phone, MessageCircle, Mail, Pencil, Trash2, Search, FileSpreadshe
 import type { Client, PropertyType, ClientType } from '@/types'
 import { formatDate, toTitleCase, formatCurrency } from '@/utils/format'
 import { pushClientsToGoogleSheets } from '@/lib/googleSheets'
+import { telHref, whatsAppHref } from '@/lib/phone'
+import { buildTimeline, matchLeadForClient, type LeadPhoneMatch, type TimelineEvent, type TimelineFollowUp } from '@/lib/timeline'
+import { TimelineList } from '@/components/timeline/TimelineList'
 import { cn } from '@/utils/cn'
 
 const PROPERTY_TYPES: PropertyType[] = ['Commercial', 'Condo', 'EC', 'HDB', 'Industrial', 'Landed', 'Other']
@@ -46,6 +49,8 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [dupeWarning, setDupeWarning] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [leadHistory, setLeadHistory] = useState<TimelineEvent[]>([])
+  const [historyNote, setHistoryNote] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -68,6 +73,39 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
     })
     else setForm(EMPTY_FORM)
   }, [open, client])
+
+  useEffect(() => {
+    if (!open || !client) { setLeadHistory([]); setHistoryNote(null); return }
+    let cancelled = false
+    const load = async () => {
+      const phone = client.whatsapp_number || client.phone
+      const { data: leads } = await supabase
+        .from('leads')
+        .select('id, phone, whatsapp_number, status, updated_at, created_at')
+        .eq('user_id', userId)
+      const match = matchLeadForClient(phone, (leads || []) as LeadPhoneMatch[])
+      if (!match) {
+        if (!cancelled) {
+          setLeadHistory([])
+          setHistoryNote(phone ? 'No lead with this phone number.' : 'Add a phone number to connect this client to a lead.')
+        }
+        return
+      }
+      const [activities, followUps] = await Promise.all([
+        supabase.from('activity_log').select('id, action, created_at').eq('lead_id', match.id).order('created_at', { ascending: false }).limit(80),
+        supabase.from('cadence_follow_ups').select('id, attempt_number, channel, status, notes, completed_at, scheduled_date').eq('lead_id', match.id),
+      ])
+      if (cancelled) return
+      setHistoryNote(null)
+      setLeadHistory(buildTimeline({
+        createdAt: match.created_at,
+        activities: activities.data || [],
+        followUps: (followUps.data || []) as TimelineFollowUp[],
+      }))
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [open, client, userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k: string) => (e: React.ChangeEvent<any>) => setForm(f => ({ ...f, [k]: e.target.value }))
   const toggleClientType = (t: ClientType) => setForm(f => ({ ...f, client_type: f.client_type === t ? '' : t }))
@@ -129,7 +167,8 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
     const displayName = toTitleCase(client.display_name || client.name)
     const initial = displayName.charAt(0).toUpperCase()
     const clientTypeCfg = CLIENT_TYPE_OPTIONS.find(o => o.value === client.client_type)
-    const waNum = (client.whatsapp_number || client.phone)?.replace(/\D/g, '')
+    const callHref = telHref(client.phone)
+    const waHref = whatsAppHref(client.whatsapp_number || client.phone)
 
     const fields = [
       { label: 'Mobile',         value: client.phone,                                              icon: <Phone size={14} /> },
@@ -172,16 +211,16 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
 
             {/* Action buttons */}
             <div className="flex justify-center gap-5 mt-5">
-              {client.phone && (
-                <a href={`tel:${client.phone}`} className="flex flex-col items-center gap-1.5 group">
+              {callHref && (
+                <a href={callHref} className="flex flex-col items-center gap-1.5 group">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <Phone size={18} />
                   </div>
                   <span className="text-[11px] text-muted-foreground font-medium">Call</span>
                 </a>
               )}
-              {waNum && (
-                <a href={`https://wa.me/65${waNum}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
+              {waHref && (
+                <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <MessageCircle size={18} />
                   </div>
@@ -229,6 +268,11 @@ function ClientFormModal({ open, onClose, client, userId, onSaved }: {
                 <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/40 border border-border rounded-2xl px-4 py-3">{client.notes}</div>
               </div>
             )}
+
+            <div>
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Lead history</div>
+              <TimelineList events={leadHistory} empty={historyNote || 'No lead history yet.'} />
+            </div>
 
             {/* Delete */}
             <div className="pt-1 border-t border-border">
@@ -485,14 +529,14 @@ export default function ClientsClient({ initialClients, userId }: { initialClien
                       {c.phone && (
                         <>
                           <a
-                            href={`tel:${c.phone}`}
+                            href={telHref(c.phone) || undefined}
                             title="Call"
                             className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
                           >
                             <Phone size={13} />
                           </a>
                           <a
-                            href={`https://wa.me/65${c.phone.replace(/\D/g, '')}`}
+                            href={whatsAppHref(c.whatsapp_number || c.phone) || undefined}
                             target="_blank"
                             rel="noopener noreferrer"
                             title="WhatsApp"
