@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyMetaSignature, parseLeadFields } from '@/lib/metaWebhook'
+import { scheduleCadence } from '@/lib/cadence'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,4 +76,20 @@ async function handleLead(leadgenId: string, pageId: string) {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id,meta_leadgen_id', ignoreDuplicates: true })
+
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id, status')
+    .eq('user_id', conn.user_id)
+    .eq('meta_leadgen_id', leadgenId)
+    .maybeSingle()
+
+  if (!lead || lead.status !== 'New') return
+
+  const { count } = await supabase
+    .from('cadence_follow_ups')
+    .select('id', { count: 'exact', head: true })
+    .eq('lead_id', lead.id)
+
+  if (!count) await scheduleCadence(supabase, conn.user_id, lead.id)
 }

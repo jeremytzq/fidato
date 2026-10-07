@@ -82,7 +82,7 @@ EXTRA_COMPONENTS = {
                     "LeadModal.tsx", "WonConversionModal.tsx", "leads/ImportLeadsModal.tsx"],
     "content-hub": ["ShareLinkModal.tsx", "TemplateModal.tsx", "UseTemplateModal.tsx"],
     "dashboard":   ["StatCard.tsx", "RevenueChart.tsx", "LeadSourceChart.tsx",
-                    "RecentActivity.tsx", "TodayFollowUps.tsx"],
+                    "RecentActivity.tsx", "TodayQueue.tsx"],
 }
 
 
