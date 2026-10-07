@@ -66,4 +66,17 @@ describe('fillTemplate', () => {
   it('replaces multiple occurrences', () => {
     expect(fillTemplate('{{client_name}} and {{client_name}}', 'Jane')).toBe('Jane and Jane')
   })
+
+  it('fills the agent, agency, and project from the profile context', () => {
+    const step = CADENCE_STEPS[0].callScript!
+    expect(step).not.toContain('Jeremy')
+    expect(step).not.toContain('PropNex')
+    expect(fillTemplate(step, {
+      clientName: 'Jane',
+      agentName: 'Aisha',
+      agencyName: 'ERA',
+      project: 'Pinnacle',
+    })).toContain("My name is Aisha, I'm a property consultant with ERA")
+    expect(fillTemplate(step, { clientName: 'Jane' })).toContain('about a property')
+  })
 })

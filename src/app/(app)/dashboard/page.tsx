@@ -3,23 +3,26 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { RecentLeads } from '@/components/dashboard/RecentActivity'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
 import { LeadSourceChart } from '@/components/dashboard/LeadSourceChart'
-import { TodayFollowUps } from '@/components/dashboard/TodayFollowUps'
+import { TodayQueue } from '@/components/dashboard/TodayQueue'
+import { buildTodayQueue, type QueueFollowUpInput, type QueueLeadInput } from '@/lib/todayQueue'
 import { formatCurrency } from '@/utils/format'
 import type { MonthlyPnL } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
-async function getDashboardData(userId: string) {
+async function getDashboardData(userId: string, fallbackAgentName: string) {
   const supabase = createClient()
 
   const today = new Date().toISOString().split('T')[0]
-  const [leadsRes, clientsRes, txRes, incomeRes, expenseRes, followUpsRes] = await Promise.all([
+  const [leadsRes, clientsRes, txRes, incomeRes, expenseRes, followUpsRes, activityRes, profileRes] = await Promise.all([
     supabase.from('leads').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
     supabase.from('clients').select('id').eq('user_id', userId),
     supabase.from('transactions').select('*').eq('user_id', userId),
     supabase.from('income').select('amount, date, category').eq('user_id', userId),
     supabase.from('expenses').select('amount, date').eq('user_id', userId),
-    supabase.from('cadence_follow_ups').select('*, leads(name, phone, display_name)').eq('user_id', userId).eq('status', 'pending').lte('scheduled_date', today).order('scheduled_date', { ascending: true }).limit(15),
+    supabase.from('cadence_follow_ups').select('id, lead_id, attempt_number, scheduled_date, channel, status').eq('user_id', userId).eq('status', 'pending').lte('scheduled_date', today).order('scheduled_date', { ascending: true }),
+    supabase.from('activity_log').select('lead_id').eq('user_id', userId).gte('created_at', `${today}T00:00:00.000Z`),
+    supabase.from('profiles').select('display_name, agency_name').eq('user_id', userId).maybeSingle(),
   ])
 
   const leads = leadsRes.data || []
@@ -27,8 +30,20 @@ async function getDashboardData(userId: string) {
   const transactions = txRes.data || []
   const incomes = incomeRes.data || []
   const expenses = expenseRes.data || []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const todayFollowUps = (followUpsRes.data || []) as any[]
+  const followUps = (followUpsRes.data || []) as QueueFollowUpInput[]
+  const touchedLeadIds = (activityRes.data || []).map(row => row.lead_id).filter(Boolean)
+  const profile = profileRes.data
+  const queue = buildTodayQueue({
+    today,
+    now: new Date(),
+    voice: {
+      agentName: profile?.display_name || fallbackAgentName,
+      agencyName: profile?.agency_name || 'our agency',
+    },
+    leads: leads as QueueLeadInput[],
+    followUps,
+    touchedLeadIds,
+  })
 
   const totalIncome = incomes.reduce((s, r) => s + r.amount, 0)
   const totalExpenses = expenses.reduce((s, r) => s + r.amount, 0)
@@ -72,7 +87,7 @@ async function getDashboardData(userId: string) {
     },
     chartData: months,
     sourceCounts,
-    todayFollowUps,
+    queue,
   }
 }
 
@@ -81,8 +96,8 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { leads, stats, chartData, sourceCounts, todayFollowUps } = await getDashboardData(user.id)
   const firstName = user.user_metadata?.full_name?.split(' ')[0] || 'there'
+  const { leads, stats, chartData, sourceCounts, queue } = await getDashboardData(user.id, user.user_metadata?.full_name || firstName)
 
   const statCards = [
     { title: 'Total Leads', value: String(stats.totalLeads), iconName: 'Users' as const, iconColor: 'hsl(235, 75%, 60%)', subtitle: 'All time' },
@@ -98,7 +113,11 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-foreground">Good morning, {firstName} 👋</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Here&apos;s what&apos;s happening with your pipeline today.</p>
+        <p className="text-muted-foreground mt-1 text-sm">Here is what needs you today.</p>
+      </div>
+
+      <div className="mb-6">
+        <TodayQueue items={queue} userId={user.id} />
       </div>
 
       {/* Stats grid */}
@@ -107,13 +126,6 @@ export default async function DashboardPage() {
           <StatCard key={s.title} {...s} index={i} />
         ))}
       </div>
-
-      {/* Today's follow-ups (only shown when there are pending items) */}
-      {todayFollowUps.length > 0 && (
-        <div className="mb-4">
-          <TodayFollowUps initialData={todayFollowUps} />
-        </div>
-      )}
 
       {/* Charts + Recent leads */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">

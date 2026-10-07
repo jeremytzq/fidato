@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { CADENCE_STEPS, getStepConfig, fillTemplate } from '@/lib/cadence'
+import { getStepConfig, scriptForStep } from '@/lib/cadence'
+import { getProfile } from '@/lib/profile'
+import { OUTCOME_LABEL, completeCadenceStep, type FollowUpOutcome } from '@/lib/followUpActions'
+import { telHref, whatsAppHref } from '@/lib/todayQueue'
 import { Phone, Voicemail, MessageCircle, CheckCircle2, SkipForward, Clock, Copy, Check } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { CadenceFollowUp, Lead } from '@/types'
@@ -45,6 +48,13 @@ export function FollowUpCadence({ lead, userId }: FollowUpCadenceProps) {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
   const [updating, setUpdating] = useState<string | null>(null)
+  const [voice, setVoice] = useState({ agentName: '', agencyName: '' })
+
+  useEffect(() => {
+    getProfile(userId).then(profile => {
+      setVoice({ agentName: profile.display_name, agencyName: profile.agency_name })
+    })
+  }, [userId])
 
   const fetchCadence = useCallback(async () => {
     const { data } = await supabase
@@ -58,14 +68,21 @@ export function FollowUpCadence({ lead, userId }: FollowUpCadenceProps) {
 
   useEffect(() => { fetchCadence() }, [fetchCadence])
 
-  const updateStatus = async (id: string, status: 'done' | 'skipped') => {
-    setUpdating(id)
-    await supabase.from('cadence_follow_ups').update({
-      status,
-      completed_at: status === 'done' ? new Date().toISOString() : null,
-    }).eq('id', id)
-    setFollowUps(prev => prev.map(f => f.id === id ? { ...f, status } : f))
-    setUpdating(null)
+  const recordOutcome = async (fu: CadenceFollowUp, outcome: FollowUpOutcome) => {
+    setUpdating(fu.id)
+    try {
+      await completeCadenceStep({
+        userId,
+        leadId: lead.id,
+        cadenceId: fu.id,
+        attemptNumber: fu.attempt_number,
+        channel: fu.channel,
+        outcome,
+      })
+      setFollowUps(prev => prev.map(row => row.id === fu.id ? { ...row, status: outcome === 'skipped' ? 'skipped' : 'done' } : row))
+    } finally {
+      setUpdating(null)
+    }
   }
 
   const handleCopy = (text: string) => {
@@ -103,11 +120,14 @@ export function FollowUpCadence({ lead, userId }: FollowUpCadenceProps) {
           const isExpanded = expanded === fu.attempt_number
           const overdue = fu.status === 'pending' && isOverdue(fu.scheduled_date)
           const isCurrent = currentStep?.id === fu.id
-          const template = config.waTemplate
-            ? fillTemplate(config.waTemplate, lead.display_name || lead.name)
-            : config.callScript
-              ? fillTemplate(config.callScript, lead.display_name || lead.name)
-              : null
+          const template = scriptForStep(fu.attempt_number, {
+            clientName: lead.display_name || lead.name,
+            agentName: voice.agentName,
+            agencyName: voice.agencyName,
+            project: lead.project_interested,
+          })
+          const callHref = telHref(lead.whatsapp_number || lead.phone)
+          const whatsAppLink = whatsAppHref(lead.whatsapp_number || lead.phone, template)
 
           return (
             <div key={fu.id}>
@@ -151,7 +171,7 @@ export function FollowUpCadence({ lead, userId }: FollowUpCadenceProps) {
                     {CHANNEL_LABEL[fu.channel]} {fu.channel === 'whatsapp' ? 'Template' : 'Script'}
                   </div>
                   <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{template}</p>
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
                     <button
                       type="button"
                       onClick={() => handleCopy(template)}
@@ -160,24 +180,31 @@ export function FollowUpCadence({ lead, userId }: FollowUpCadenceProps) {
                       {copied ? <Check size={11} /> : <Copy size={11} />}
                       {copied ? 'Copied!' : 'Copy'}
                     </button>
-                    <div className="flex gap-1.5 ml-auto">
+                    {callHref && (
+                      <a href={callHref} className="text-xs text-foreground hover:text-primary">Call</a>
+                    )}
+                    {whatsAppLink && (
+                      <a href={whatsAppLink} target="_blank" rel="noopener noreferrer" className="text-xs text-green-700 hover:text-green-800">WhatsApp</a>
+                    )}
+                    {(['connected', 'no_answer', 'voicemail', 'replied'] as FollowUpOutcome[]).map(outcome => (
                       <button
+                        key={outcome}
                         type="button"
                         disabled={updating === fu.id}
-                        onClick={() => updateStatus(fu.id, 'skipped')}
-                        className="text-xs px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                        onClick={() => recordOutcome(fu, outcome)}
+                        className="text-xs px-2 py-1 rounded-md border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                       >
-                        Skip
+                        {OUTCOME_LABEL[outcome]}
                       </button>
-                      <button
-                        type="button"
-                        disabled={updating === fu.id}
-                        onClick={() => updateStatus(fu.id, 'done')}
-                        className="text-xs px-2.5 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-                      >
-                        Mark Done
-                      </button>
-                    </div>
+                    ))}
+                    <button
+                      type="button"
+                      disabled={updating === fu.id}
+                      onClick={() => recordOutcome(fu, 'skipped')}
+                      className="text-xs px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      Skip
+                    </button>
                   </div>
                 </div>
               )}
