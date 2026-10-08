@@ -71,12 +71,25 @@ describe('fillTemplate', () => {
     const step = CADENCE_STEPS[0].callScript!
     expect(step).not.toContain('Jeremy')
     expect(step).not.toContain('PropNex')
-    expect(fillTemplate(step, {
+    const filled = fillTemplate(step, {
       clientName: 'Jane',
       agentName: 'Aisha',
       agencyName: 'ERA',
       project: 'Pinnacle',
-    })).toContain("My name is Aisha, I'm a property consultant with ERA")
-    expect(fillTemplate(step, { clientName: 'Jane' })).toContain('about a property')
+    })
+    expect(filled).toContain("It's Aisha from ERA")
+    expect(filled).toContain('about Pinnacle')
+    expect(fillTemplate(step, { clientName: 'Jane' })).toBe(
+      "Hi, is this Jane? It's your consultant from our agency. You got in touch. Have you got a minute?",
+    )
+  })
+
+  it('keeps the connection scripts short and free of a sales pitch', () => {
+    const salesy = /i'd love|no pressure|viewing|new launches|market has been|😊|🏠|✨/i
+    for (const step of CADENCE_STEPS) {
+      const raw = step.callScript || step.waTemplate || ''
+      expect(raw).not.toMatch(salesy)
+      expect(raw.length).toBeLessThan(220)
+    }
   })
 })

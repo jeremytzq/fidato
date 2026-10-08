@@ -5,7 +5,6 @@ export { telHref, toInternationalDigits, whatsAppHref } from '@/lib/phone'
 
 export const STALE_NEGOTIATING_DAYS = 5
 export const FRESH_META_MS = 48 * 60 * 60 * 1000
-export const QUEUE_LIMIT = 20
 
 export type QueueReason = 'cadence' | 'fresh_meta' | 'stalled' | 'birthday'
 
@@ -100,14 +99,14 @@ function voiceContext(lead: QueueLeadInput, voice: AgentVoice): TemplateContext 
 
 function checkInScript(lead: QueueLeadInput, voice: AgentVoice): string {
   return fillTemplate(
-    `Hi {{client_name}}, {{agent_name}} from {{agency}}. Checking in on {{project}} — happy to pick this up whenever you're ready.`,
+    `Hi {{client_name}}, it's {{agent_name}} from {{agency}}. Checking in{{project_clause}}. Tell me if the timing has changed.`,
     voiceContext(lead, voice),
   )
 }
 
 function birthdayScript(lead: QueueLeadInput, voice: AgentVoice): string {
   return fillTemplate(
-    `Hi {{client_name}}, {{agent_name}} from {{agency}} here. Wishing you a wonderful birthday!`,
+    `Hi {{client_name}}, it's {{agent_name}}. Happy birthday.`,
     voiceContext(lead, voice),
   )
 }
@@ -175,7 +174,7 @@ export function buildTodayQueue(input: {
         leadStatus: lead.status,
         phone: leadPhone(lead),
         title: 'New Meta lead',
-        detail: 'Call while the enquiry is still warm',
+        detail: 'New enquiry',
         script: scriptForStep(1, voiceContext(lead, input.voice)),
         channel: 'call',
         cadenceId: null,
@@ -228,5 +227,5 @@ export function buildTodayQueue(input: {
     }
   }
 
-  return Array.from(byLead.values()).sort(compareQueueItems).slice(0, QUEUE_LIMIT)
+  return Array.from(byLead.values()).sort(compareQueueItems)
 }

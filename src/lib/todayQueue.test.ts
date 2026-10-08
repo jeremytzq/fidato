@@ -130,7 +130,23 @@ describe('buildTodayQueue', () => {
     expect(items[0].detail).toBe('No update in 17 days')
     expect(items[0].script).toContain('Parc Esta')
     expect(items[1].leadName).toBe('Nora Lim')
-    expect(items[1].script).toContain('wonderful birthday')
+    expect(items[1].script).toContain('Happy birthday')
+  })
+
+  it('lists every contact instead of stopping at twenty', () => {
+    const leads = Array.from({ length: 21 }, (_, index) => lead({ id: `l${index}`, name: `Lead ${index}` }))
+    const items = buildTodayQueue({
+      today,
+      now,
+      voice,
+      leads,
+      followUps: leads.map((item, index) => step({
+        id: `c${index}`,
+        lead_id: item.id,
+        scheduled_date: '2026-10-01',
+      })),
+    })
+    expect(items).toHaveLength(21)
   })
 
   it('skips Won and Lost leads even when a cadence step is pending', () => {
