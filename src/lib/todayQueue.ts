@@ -1,9 +1,10 @@
 import { getStepConfig, scriptForStep, fillTemplate, type TemplateContext } from '@/lib/cadence'
 import type { CadenceChannel } from '@/types'
 
+export { telHref, toInternationalDigits, whatsAppHref } from '@/lib/phone'
+
 export const STALE_NEGOTIATING_DAYS = 5
 export const FRESH_META_MS = 48 * 60 * 60 * 1000
-export const QUEUE_LIMIT = 20
 
 export type QueueReason = 'cadence' | 'fresh_meta' | 'stalled' | 'birthday'
 
@@ -53,28 +54,6 @@ export interface TodayQueueItem {
   overdue: boolean
 }
 
-export function toInternationalDigits(phone: string | null | undefined): string | null {
-  if (!phone) return null
-  let digits = phone.replace(/\D/g, '')
-  if (digits.startsWith('00')) digits = digits.slice(2)
-  if (!digits) return null
-  if (digits.length === 8) digits = `65${digits}`
-  return digits
-}
-
-export function telHref(phone: string | null | undefined): string | null {
-  const digits = toInternationalDigits(phone)
-  return digits ? `tel:+${digits}` : null
-}
-
-export function whatsAppHref(phone: string | null | undefined, message?: string | null): string | null {
-  const digits = toInternationalDigits(phone)
-  if (!digits) return null
-  const base = `https://wa.me/${digits}`
-  if (!message) return base
-  return `${base}?text=${encodeURIComponent(message)}`
-}
-
 export function compareQueueItems(a: TodayQueueItem, b: TodayQueueItem): number {
   if (a.rank !== b.rank) return a.rank - b.rank
   if (a.rank === 1) return b.sortKey.localeCompare(a.sortKey)
@@ -120,14 +99,14 @@ function voiceContext(lead: QueueLeadInput, voice: AgentVoice): TemplateContext 
 
 function checkInScript(lead: QueueLeadInput, voice: AgentVoice): string {
   return fillTemplate(
-    `Hi {{client_name}}, {{agent_name}} from {{agency}}. Checking in on {{project}} — happy to pick this up whenever you're ready.`,
+    `Hi {{client_name}}, it's {{agent_name}} from {{agency}}. Checking in{{project_clause}}. Tell me if the timing has changed.`,
     voiceContext(lead, voice),
   )
 }
 
 function birthdayScript(lead: QueueLeadInput, voice: AgentVoice): string {
   return fillTemplate(
-    `Hi {{client_name}}, {{agent_name}} from {{agency}} here. Wishing you a wonderful birthday!`,
+    `Hi {{client_name}}, it's {{agent_name}}. Happy birthday.`,
     voiceContext(lead, voice),
   )
 }
@@ -195,7 +174,7 @@ export function buildTodayQueue(input: {
         leadStatus: lead.status,
         phone: leadPhone(lead),
         title: 'New Meta lead',
-        detail: 'Call while the enquiry is still warm',
+        detail: 'New enquiry',
         script: scriptForStep(1, voiceContext(lead, input.voice)),
         channel: 'call',
         cadenceId: null,
@@ -248,5 +227,5 @@ export function buildTodayQueue(input: {
     }
   }
 
-  return Array.from(byLead.values()).sort(compareQueueItems).slice(0, QUEUE_LIMIT)
+  return Array.from(byLead.values()).sort(compareQueueItems)
 }

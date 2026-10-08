@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
 import type { Metadata } from 'next'
+import { whatsAppHref } from '@/lib/phone'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +46,7 @@ export default async function SharePage({ params }: { params: { token: string } 
   const agentName = profile?.display_name || 'Jeremy Tan'
   const agencyName = profile?.agency_name || 'PropNex Realty'
   const ceaRegNo = profile?.cea_reg_no
-  const whatsappNumber = profile?.whatsapp_number || '6590039987'
+  const whatsappHref = whatsAppHref(profile?.whatsapp_number || '6590039987')
   const agentInitial = agentName.trim().charAt(0).toUpperCase() || 'J'
 
   // Log the view
@@ -97,13 +98,15 @@ export default async function SharePage({ params }: { params: { token: string } 
               {agencyName}{ceaRegNo ? ` · CEA Reg No. ${ceaRegNo}` : ''}
             </p>
           </div>
-          <a
-            href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`}
-            className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors"
-            style={{ background: '#25D366' }}
-          >
-            WhatsApp
-          </a>
+          {whatsappHref && (
+            <a
+              href={whatsappHref}
+              className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors"
+              style={{ background: '#25D366' }}
+            >
+              WhatsApp
+            </a>
+          )}
         </div>
 
         <p className="text-center text-[10px] text-gray-400">Powered by Fidato Labs</p>

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate, toTitleCase } from '@/utils/format'
 import { cn } from '@/utils/cn'
+import { telHref, whatsAppHref } from '@/lib/phone'
 import {
   Phone, MessageCircle, Mail, Pencil, Trash2,
   Search, X, Building2, Calendar, ChevronDown, ChevronUp,
@@ -337,7 +338,8 @@ function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
     const displayName = toTitleCase(recruit.name)
     const initial = displayName.charAt(0).toUpperCase()
     const cfg = STATUS_CFG[recruit.status]
-    const waNum = recruit.phone?.replace(/\D/g, '')
+    const callHref = telHref(recruit.phone)
+    const waHref = whatsAppHref(recruit.phone)
 
     const fields = [
       { label: 'Mobile',    value: recruit.phone,                                                         icon: <Phone size={14} /> },
@@ -367,16 +369,16 @@ function RecruitModal({ open, onClose, recruit, userId, onSaved }: {
               </span>
             </div>
             <div className="flex justify-center gap-5 mt-5">
-              {recruit.phone && (
-                <a href={`tel:${recruit.phone}`} className="flex flex-col items-center gap-1.5 group">
+              {callHref && (
+                <a href={callHref} className="flex flex-col items-center gap-1.5 group">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <Phone size={18} />
                   </div>
                   <span className="text-[11px] text-muted-foreground font-medium">Call</span>
                 </a>
               )}
-              {waNum && (
-                <a href={`https://wa.me/65${waNum}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
+              {waHref && (
+                <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <MessageCircle size={18} />
                   </div>
@@ -770,7 +772,7 @@ export default function RecruitmentClient({
                       <div className="flex items-center justify-end gap-1">
                         {r.phone && (
                           <a
-                            href={`https://wa.me/65${r.phone.replace(/\D/g, '')}`}
+                            href={whatsAppHref(r.phone) || undefined}
                             target="_blank" rel="noopener noreferrer"
                             title="WhatsApp"
                             className="p-1.5 rounded-lg hover:bg-green-50 text-muted-foreground hover:text-green-600 transition-colors"

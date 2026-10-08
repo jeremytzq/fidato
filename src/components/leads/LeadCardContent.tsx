@@ -9,6 +9,7 @@ import {
 import type { Lead, LeadStatus, LeadSource, ClientType, LeadGrade } from '@/types'
 import { formatCurrency, formatDate, toTitleCase } from '@/utils/format'
 import { logActivity } from '@/lib/activity'
+import { telHref, whatsAppHref } from '@/lib/phone'
 import { cn } from '@/utils/cn'
 
 export type CardDensity = 'comfortable' | 'compact'
@@ -80,6 +81,8 @@ export function LeadCardContent({
 }) {
   const handleCall = () => logActivity(userId, lead.id, 'Called')
   const handleWhatsApp = () => logActivity(userId, lead.id, 'Sent WhatsApp message')
+  const callHref = telHref(lead.phone)
+  const waHref = whatsAppHref(lead.whatsapp_number || lead.phone)
 
   const ip = actionsAlwaysVisible ? 'p-2.5' : 'p-1.5'
   const iz = actionsAlwaysVisible ? 16 : 13
@@ -96,9 +99,9 @@ export function LeadCardContent({
       )}
       onPointerDown={e => e.stopPropagation()}
     >
-      {lead.phone && (
+      {callHref && (
         <a
-          href={`tel:${lead.phone}`}
+          href={callHref}
           onClick={handleCall}
           title="Call"
           className={cn(ip, 'rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground')}
@@ -106,9 +109,9 @@ export function LeadCardContent({
           <Phone size={iz} />
         </a>
       )}
-      {lead.phone && (
+      {waHref && (
         <a
-          href={`https://wa.me/65${lead.phone.replace(/\D/g, '')}`}
+          href={waHref}
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleWhatsApp}

@@ -15,65 +15,65 @@ export const CADENCE_STEPS: CadenceStep[] = [
     attempt: 1,
     dayOffset: 0,
     channel: 'call',
-    label: 'Call #1 — First Contact',
-    callScript: `Hi, may I speak with {{client_name}}? My name is {{agent_name}}, I'm a property consultant with {{agency}}. You'd recently enquired about {{project}}, and I'm calling to help answer any questions you might have. Is now a good time to chat?`,
+    label: 'Call 1',
+    callScript: `Hi, is this {{client_name}}? It's {{agent_name}} from {{agency}}. You got in touch{{project_clause}}. Have you got a minute?`,
     waTemplate: null,
   },
   {
     attempt: 2,
     dayOffset: 2,
     channel: 'call',
-    label: 'Call #2 — Follow-Up',
-    callScript: `Hi {{client_name}}, {{agent_name}} here from {{agency}}. I tried reaching you a couple of days ago about your property enquiry — just wanted to follow up and see if you had any questions. I'd love to share some options that might be a good fit for you. Is now a good time?`,
+    label: 'Call 2',
+    callScript: `Hi {{client_name}}, it's {{agent_name}}. I called a couple of days ago{{project_clause}}. Is this still a good time?`,
     waTemplate: null,
   },
   {
     attempt: 3,
     dayOffset: 5,
     channel: 'voicemail',
-    label: 'Voicemail Drop',
-    callScript: `Hi {{client_name}}, this is {{agent_name}} from {{agency}}. I've tried reaching you a couple of times about your property enquiry. No rush at all — whenever you're ready, feel free to call me back or drop me a WhatsApp. I'll follow up with a message. Hope to connect soon!`,
+    label: 'Voicemail',
+    callScript: `Hi {{client_name}}, it's {{agent_name}} from {{agency}}. Sorry I missed you{{project_clause}}. I'll WhatsApp you so you can reply when you're free.`,
     waTemplate: null,
   },
   {
     attempt: 4,
     dayOffset: 9,
     channel: 'whatsapp',
-    label: 'WhatsApp #1 — Soft Reach Out',
+    label: 'WhatsApp',
     callScript: null,
-    waTemplate: `Hi {{client_name}}, {{agent_name}} here from {{agency}} 😊 I tried calling a couple of times — just didn't want to keep ringing if it's not convenient. If you're still looking at {{project}}, I'd be happy to share some options or arrange a viewing whenever suits you. No pressure at all! 🏠`,
+    waTemplate: `Hi {{client_name}}, {{agent_name}} from {{agency}}. I tried calling{{project_clause}} and didn't want to keep ringing. Reply whenever you're free.`,
   },
   {
     attempt: 5,
     dayOffset: 13,
     channel: 'call',
-    label: 'Call #3 — Mid Cadence',
-    callScript: `Hi {{client_name}}, {{agent_name}} from {{agency}} here. I sent you a WhatsApp a few days ago — just following up to see if you had a chance to look at it. Happy to share some current market updates or new launches if you're still exploring your options.`,
+    label: 'Call 3',
+    callScript: `Hi {{client_name}}, it's {{agent_name}} from {{agency}}. Did my last message reach you? If now is a bad time, just say so.`,
     waTemplate: null,
   },
   {
     attempt: 6,
     dayOffset: 17,
     channel: 'whatsapp',
-    label: 'WhatsApp #2 — Value Add',
+    label: 'WhatsApp check-in',
     callScript: null,
-    waTemplate: `Hi {{client_name}} 👋 {{agent_name}} from {{agency}}. Just sharing a quick update that might be useful for {{project}} — the market has been quite active lately, and there are some good options coming up. Happy to run you through them if you're interested! Feel free to reply anytime 😊`,
+    waTemplate: `Hi {{client_name}}, {{agent_name}} here. Happy to talk{{project_clause}} if it's still useful. If you've moved on, no need to reply.`,
   },
   {
     attempt: 7,
     dayOffset: 23,
     channel: 'call',
-    label: 'Call #4 — Late Cadence',
-    callScript: `Hi {{client_name}}, {{agent_name}} here from {{agency}}. I know we haven't managed to connect — just one last try before I give you some space. If things have changed or you're ready to explore your options, I'm just a call or message away. All the best!`,
+    label: 'Call 4',
+    callScript: `Hi {{client_name}}, it's {{agent_name}} from {{agency}}. I'll stop after this. If you want to talk{{project_clause}} later, I'm around.`,
     waTemplate: null,
   },
   {
     attempt: 8,
     dayOffset: 29,
     channel: 'whatsapp',
-    label: 'WhatsApp #3 — Final',
+    label: 'Last note',
     callScript: null,
-    waTemplate: `Hi {{client_name}}, {{agent_name}} from {{agency}} 🙂 This'll be my last message for now — just want you to know I'm here if you ever decide to explore the property market. Feel free to reach out anytime! Wishing you all the best 🏠✨`,
+    waTemplate: `Hi {{client_name}}, {{agent_name}} from {{agency}}. Last note from me. Message me if you want to pick this up later.`,
   },
 ]
 
@@ -115,12 +115,13 @@ export function fillTemplate(template: string, clientNameOrContext: string | Tem
   const ctx: TemplateContext = typeof clientNameOrContext === 'string'
     ? { clientName: clientNameOrContext }
     : clientNameOrContext
-  const project = ctx.project?.trim() || 'a property'
+  const project = ctx.project?.trim() || ''
   return template
     .replace(/{{client_name}}/g, ctx.clientName)
     .replace(/{{agent_name}}/g, ctx.agentName?.trim() || 'your consultant')
     .replace(/{{agency}}/g, ctx.agencyName?.trim() || 'our agency')
-    .replace(/{{project}}/g, project)
+    .replace(/{{project_clause}}/g, project ? ` about ${project}` : '')
+    .replace(/{{project}}/g, project || 'the home you asked about')
 }
 
 export function scriptForStep(attempt: number, ctx: TemplateContext): string | null {

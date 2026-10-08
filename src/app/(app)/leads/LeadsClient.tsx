@@ -15,6 +15,7 @@ import type { Lead, LeadStatus, LeadGrade, ClientType, PropertyType } from '@/ty
 import { toTitleCase } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import { logActivity } from '@/lib/activity'
+import { whatsAppHref } from '@/lib/phone'
 import { pushLeadsToGoogleSheets } from '@/lib/googleSheets'
 import { createClient } from '@/lib/supabase/client'
 
@@ -276,7 +277,7 @@ function FindLeadDupesModal({ leads, onClose, onDeleted }: {
   )
 }
 
-export default function LeadsClient({ initialLeads, userId }: { initialLeads: Lead[]; userId: string }) {
+export default function LeadsClient({ initialLeads, userId, initialLeadId = null }: { initialLeads: Lead[]; userId: string; initialLeadId?: string | null }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [modalOpen, setModalOpen] = useState(false)
@@ -302,6 +303,20 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
       // localStorage unavailable — fall back to default density silently
     }
   }, [])
+
+  useEffect(() => {
+    if (!initialLeadId) return
+    const lead = initialLeads.find(item => item.id === initialLeadId)
+    if (!lead) return
+    setEditingLead(lead)
+    setForceEditMode(false)
+    setModalOpen(true)
+  }, [initialLeadId, initialLeads])
+
+  const closeModal = () => {
+    setModalOpen(false)
+    if (initialLeadId) router.replace('/leads')
+  }
 
   const changeDensity = (d: CardDensity) => {
     setDensity(d)
@@ -362,9 +377,10 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
   }
 
   const openWhatsAppForLead = (lead: Lead) => {
-    if (!lead.phone) return
+    const href = whatsAppHref(lead.whatsapp_number || lead.phone)
+    if (!href) return
     logActivity(userId, lead.id, 'Sent WhatsApp message')
-    window.open(`https://wa.me/65${lead.phone.replace(/\D/g, '')}`, '_blank')
+    window.open(href, '_blank')
   }
 
   // Keyboard shortcuts — hover a lead card on the Kanban and press a key
@@ -610,7 +626,7 @@ export default function LeadsClient({ initialLeads, userId }: { initialLeads: Le
 
       <LeadModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         lead={editingLead}
         defaultStatus={defaultStatus}
         userId={userId}

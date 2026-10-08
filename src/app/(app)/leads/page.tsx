@@ -3,7 +3,7 @@ import LeadsClient from './LeadsClient'
 
 export const dynamic = 'force-dynamic'
 
-export default async function LeadsPage() {
+export default async function LeadsPage({ searchParams }: { searchParams: { lead?: string } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -14,5 +14,5 @@ export default async function LeadsPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  return <LeadsClient initialLeads={leads || []} userId={user.id} />
+  return <LeadsClient initialLeads={leads || []} userId={user.id} initialLeadId={searchParams.lead ?? null} />
 }

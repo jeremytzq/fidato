@@ -6,6 +6,7 @@ import { Input, Select } from '@/components/ui/Input'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
+import { logActivity } from '@/lib/activity'
 import type { Lead, TransactionType } from '@/types'
 
 const TRANSACTION_TYPES: TransactionType[] = ['Lease', 'Purchase', 'Rental', 'Sale']
@@ -63,6 +64,7 @@ export function WonConversionModal({ open, onClose, lead, userId, onConverted }:
       .update({ status: 'Won', updated_at: now })
       .eq('id', lead.id)
     if (leadErr) { setSaving(false); setError(leadErr.message); return }
+    await logActivity(userId, lead.id, 'Marked Won')
 
     // Check for existing client by phone to avoid duplicates
     const normalizedPhone = lead.phone?.replace(/\D/g, '') || null

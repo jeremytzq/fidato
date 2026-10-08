@@ -11,6 +11,9 @@ import type { Lead, LeadStatus, LeadSource, PropertyType, LeadGrade, ClientType,
 import { cn } from '@/utils/cn'
 import { toTitleCase, formatCurrency } from '@/utils/format'
 import { scheduleCadence } from '@/lib/cadence'
+import { telHref, whatsAppHref } from '@/lib/phone'
+import { buildTimeline, type TimelineFollowUp } from '@/lib/timeline'
+import { TimelineList } from '@/components/timeline/TimelineList'
 import { FollowUpCadence } from './FollowUpCadence'
 import { getAutomationSettings, addDays, dateOnly } from '@/lib/automations'
 import type { AutomationSettings } from '@/types'
@@ -45,10 +48,6 @@ function avatarBg(name: string) {
   return AVATAR_COLORS[name ? name.charCodeAt(0) % AVATAR_COLORS.length : 0]
 }
 
-function fmtActivityTime(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-}
-
 function fmtDate(dateStr: string | null) {
   if (!dateStr) return null
   return new Date(dateStr).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -74,6 +73,7 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
   const [saveError, setSaveError] = useState<string | null>(null)
   const [dupeWarning, setDupeWarning] = useState<string | null>(null)
   const [activities, setActivities] = useState<ActivityLog[]>([])
+  const [followUps, setFollowUps] = useState<TimelineFollowUp[]>([])
 
   const [form, setForm] = useState({
     name: '', display_name: '', email: '', phone: '', whatsapp_number: '',
@@ -122,14 +122,19 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
   }, [open, userId])
 
   useEffect(() => {
-    if (!lead?.id) { setActivities([]); return }
+    if (!lead?.id || !open) { setActivities([]); setFollowUps([]); return }
     supabase
       .from('activity_log')
       .select('*')
       .eq('lead_id', lead.id)
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(80)
       .then(({ data }) => setActivities((data as ActivityLog[]) || []))
+    supabase
+      .from('cadence_follow_ups')
+      .select('id, attempt_number, channel, status, notes, completed_at, scheduled_date')
+      .eq('lead_id', lead.id)
+      .then(({ data }) => setFollowUps((data as TimelineFollowUp[]) || []))
   }, [lead?.id, open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -228,8 +233,13 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
     const statusCfg = STATUS_CONFIG[lead.status]
     const clientTypeCfg = CLIENT_TYPE_OPTIONS.find(o => o.value === lead.client_type)
     const gradeOpt = GRADE_OPTIONS.find(g => g.value === lead.grade)
-    const waNum = (lead.whatsapp_number || lead.phone)?.replace(/\D/g, '')
-    const allActivities = [...activities, { id: 'added', action: 'Lead added', created_at: lead.created_at }]
+    const callHref = telHref(lead.phone)
+    const waHref = whatsAppHref(lead.whatsapp_number || lead.phone)
+    const timeline = buildTimeline({
+      createdAt: lead.created_at,
+      activities,
+      followUps,
+    })
 
     const fields = [
       { label: 'Mobile',          value: lead.phone,                                          icon: <Phone size={14} /> },
@@ -281,16 +291,16 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
 
             {/* Action buttons */}
             <div className="flex justify-center gap-5 mt-5">
-              {lead.phone && (
-                <a href={`tel:${lead.phone}`} className="flex flex-col items-center gap-1.5 group">
+              {callHref && (
+                <a href={callHref} className="flex flex-col items-center gap-1.5 group">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <Phone size={18} />
                   </div>
                   <span className="text-[11px] text-muted-foreground font-medium">Call</span>
                 </a>
               )}
-              {waNum && (
-                <a href={`https://wa.me/65${waNum}`} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
+              {waHref && (
+                <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 group">
                   <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-600 group-hover:bg-green-100 group-hover:scale-105 transition-all shadow-sm">
                     <MessageCircle size={18} />
                   </div>
@@ -342,25 +352,9 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
             {/* Cold lead cadence */}
             {lead.client_type === 'Cold' && <FollowUpCadence lead={lead} userId={lead.user_id} />}
 
-            {/* Activity timeline — 2-column */}
             <div>
-              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Activity</div>
-              <div>
-                {allActivities.map((a, i) => (
-                  <div key={a.id} className="flex gap-3">
-                    {/* dot + vertical connector */}
-                    <div className="flex flex-col items-center w-5 flex-shrink-0">
-                      <div className="w-2 h-2 rounded-full bg-primary/60 mt-1.5 flex-shrink-0" />
-                      {i < allActivities.length - 1 && <div className="w-px flex-1 bg-border mt-1.5 mb-0" />}
-                    </div>
-                    {/* 2-col: action left, date right */}
-                    <div className="flex justify-between items-baseline gap-4 flex-1 pb-4">
-                      <span className="text-sm font-medium text-foreground leading-snug">{a.action}</span>
-                      <span className="text-xs text-muted-foreground flex-shrink-0 tabular-nums">{fmtActivityTime(a.created_at)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Timeline</div>
+              <TimelineList events={timeline} />
             </div>
 
             {/* Delete */}
@@ -497,20 +491,11 @@ export function LeadModal({ open, onClose, lead, defaultStatus = 'New', userId, 
 
         {lead && lead.client_type === 'Cold' && <FollowUpCadence lead={lead} userId={userId} />}
 
-        {lead && activities.length > 0 && (
+        {lead && (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Activity</p>
-            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-              {activities.map(a => (
-                <div key={a.id} className="flex items-center gap-2.5 text-xs">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary/40 flex-shrink-0 mt-px" />
-                  <span className="text-foreground font-medium flex items-center gap-1.5">
-                    {a.action.includes('Call') ? <Phone size={10} /> : <MessageCircle size={10} />}
-                    {a.action}
-                  </span>
-                  <span className="text-muted-foreground ml-auto">{fmtActivityTime(a.created_at)}</span>
-                </div>
-              ))}
+            <p className="text-sm font-medium text-foreground">Timeline</p>
+            <div className="max-h-48 overflow-y-auto pr-1">
+              <TimelineList events={buildTimeline({ createdAt: lead.created_at, activities, followUps })} />
             </div>
           </div>
         )}
